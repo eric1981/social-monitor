@@ -256,10 +256,10 @@ body {
     <div class="logo">📡 <span>Social Monitor</span></div>
     <div class="nav-tabs">
       <a class="active" @click="setTab('all')">All</a>
-      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')">抖音</a>
-      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')">快手</a>
-      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')">小红书</a>
-      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')">视频号</a>
+      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')"><img src="抖音.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 抖音</a>
+      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="快手.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
+      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="小红书.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
+      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="视频号.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
     </div>
     <div class="nav-right">
       <a @click="refreshData">🔄 刷新</a>
@@ -333,7 +333,7 @@ body {
   <div v-else class="card-grid">
     <div v-for="v in filteredVideos" :key="v.aweme_id" class="card">
       <div class="card-header">
-        <span class="platform-badge">{{ platformLabel(v.platform) }}</span>
+        <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
         <span class="account-name">{{ accountLabel(v) }}</span>
       </div>
       <div class="card-body">
@@ -349,40 +349,40 @@ body {
       <div class="card-time">🕐 {{ publishTime(v) }}</div>
     </div>
   </div>
-</div>
 
-<!-- Login Modal -->
-<div v-if="showLoginModal" class="modal-overlay" @click.self="closeLoginModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>新增监控账号</h2>
-      <button class="modal-close" @click="closeLoginModal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">平台</label>
-        <select v-model="loginPlatform" class="form-select">
-          <option value="douyin">🎵 抖音</option>
-          <option value="kuaishou">🎬 快手</option>
-          <option value="xiaohongshu">📕 小红书</option>
-          <option value="shipinhao">📺 视频号</option>
-        </select>
+  <!-- Login Modal (inside #app so Vue can control it) -->
+  <div v-if="showLoginModal" class="modal-overlay" @click.self="closeLoginModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增监控账号</h2>
+        <button class="modal-close" @click="closeLoginModal">✕</button>
       </div>
-      <div class="form-group">
-        <label class="form-label">内部账号名</label>
-        <input v-model="loginAccount" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
-        <div class="form-hint">自定义标识，用于区分同一平台的不同账号</div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">平台</label>
+          <select v-model="loginPlatform" class="form-select">
+            <option value="douyin">抖音</option>
+            <option value="kuaishou">快手</option>
+            <option value="xiaohongshu">小红书</option>
+            <option value="shipinhao">视频号</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">内部账号名</label>
+          <input v-model="loginAccount" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
+          <div class="form-hint">自定义标识，用于区分同一平台的不同账号</div>
+        </div>
+        <div v-if="loginStatus" class="form-status" :class="{error: loginStatus.includes('失败') || loginStatus.includes('超时')}">
+          {{ loginStatus }}
+        </div>
       </div>
-      <div v-if="loginStatus" class="form-status" :class="{error: loginStatus.includes('失败') || loginStatus.includes('超时')}">
-        {{ loginStatus }}
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy">取消</button>
+        <button class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccount.trim()">
+          <span v-if="loginBusy" class="spinner-sm"></span>
+          <span v-else>打开浏览器扫码</span>
+        </button>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy">取消</button>
-      <button class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccount.trim()">
-        <span v-if="loginBusy" class="spinner-sm"></span>
-        <span v-else>打开浏览器扫码</span>
-      </button>
     </div>
   </div>
 </div>
@@ -474,8 +474,13 @@ createApp({
     }
 
     function platformLabel(p) {
-      const map = { douyin: '🎵 抖音', kuaishou: '🎬 快手', xiaohongshu: '📕 小红书', shipinhao: '📺 视频号' };
-      return map[p] || p;
+      const icons = {
+        douyin: '<img src="抖音.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 抖音',
+        kuaishou: '<img src="快手.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 快手',
+        xiaohongshu: '<img src="小红书.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 小红书',
+        shipinhao: '<img src="视频号.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 视频号',
+      };
+      return icons[p] || p;
     }
 
     const filteredVideos = computed(() => {
@@ -531,7 +536,7 @@ createApp({
         return;
       }
       loginBusy.value = true;
-      loginStatus.value = '正在打开浏览器扫码窗口...';
+      loginStatus.value = '正在打开扫码窗口...';
       try {
         const resp = await fetch('/api/login', {
           method: 'POST',
@@ -543,11 +548,10 @@ createApp({
         });
         const result = await resp.json();
         if (result.status === 'ok') {
-          loginStatus.value = '登录成功！正在刷新数据...';
-          closeLoginModal();
-          refreshData();
+          loginStatus.value = '扫码窗口已打开，请在 Windows 上扫码';
+          setTimeout(() => { closeLoginModal(); refreshData(); }, 2000);
         } else {
-          loginStatus.value = result.message || '登录失败';
+          loginStatus.value = result.message || '请求失败';
         }
       } catch (e) {
         loginStatus.value = '请求失败: ' + e.message;
@@ -565,7 +569,10 @@ createApp({
       }
     }
 
-    onMounted(() => { refreshData(); });
+    onMounted(() => {
+      console.log('SocialMonitor mounted, showLoginModal=', showLoginModal.value);
+      refreshData();
+    });
 
     return {
       tab, searchQuery, sortBy, sortOrder, accountFilter,
