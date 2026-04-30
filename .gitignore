@@ -31,3 +31,11 @@ logs/
 .idea/
 *.swp
 *.swo
+*.pyc
+__pycache__/
+.venv/
+monitor.db
+cookies/
+tmp/
+logs/
+*:Zone.Identifier
