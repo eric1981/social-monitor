@@ -184,7 +184,9 @@ def collect_douyin(conn, account):
 
         video_id, is_new = ensure_video(
             conn, account_id, 'douyin', account_name,
-            aweme_id, title, duration, '', create_time
+            aweme_id, title, duration,
+            v.get('share_url', '') or f'https://www.douyin.com/video/{aweme_id}',
+            create_time
         )
         if is_new:
             new_count += 1
@@ -369,7 +371,9 @@ def collect_xiaohongshu(conn, account):
 
         video_id, is_new = ensure_video(
             conn, account_id, 'xiaohongshu', account_name,
-            aweme_id, title, 0, '', str(create_time) if create_time else None
+            aweme_id, title, 0,
+            f'https://www.xiaohongshu.com/discovery/item/{note_id}',
+            str(create_time) if create_time else None
         )
         if is_new:
             new_count += 1
@@ -454,13 +458,15 @@ def collect_shipinhao(conn, account):
         if not object_id:
             continue
         aweme_id = f"sph_{object_id.split('/')[-1][:20]}" if '/' in object_id else f"sph_{object_id[:20]}"
+        real_id = object_id.split('/')[-1] if '/' in object_id else object_id
 
         title = v.get('title', '')
         create_time = v.get('create_time', '')
 
         video_id, is_new = ensure_video(
             conn, account_id, 'shipinhao', account_name,
-            aweme_id, title, v.get('duration', 0), '',
+            aweme_id, title, v.get('duration', 0),
+            f'https://channels.weixin.qq.com/post/{real_id}',
             str(create_time) if create_time else None
         )
         if is_new:

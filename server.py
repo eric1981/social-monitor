@@ -34,10 +34,23 @@ def query_data():
     ]
     nickname_map = {a['account_name']: (a['nickname'] or a['account_name']) for a in accounts}
 
+    def build_url(v):
+        p = v['platform']
+        vid = v['aweme_id']
+        if p == 'douyin':
+            return f'https://www.douyin.com/video/{vid}'
+        elif p == 'kuaishou':
+            return f'https://www.kuaishou.com/short-video/{vid.replace("ks_", "")}' if vid.startswith('ks_') else ''
+        elif p == 'xiaohongshu':
+            return f'https://www.xiaohongshu.com/discovery/item/{vid.replace("xhs_", "")}' if vid.startswith('xhs_') else ''
+        elif p == 'shipinhao':
+            return f'https://channels.weixin.qq.com/post/{vid.replace("sph_", "")}' if vid.startswith('sph_') else ''
+        return ''
+
     videos = []
     cur = conn.execute('''
         SELECT v.platform, v.account_name, v.aweme_id, v.title,
-               v.first_seen,
+               v.first_seen, v.url,
                s.collected_at, s.play_count, s.digg_count,
                s.comment_count, s.share_count, s.collect_count
         FROM videos v
@@ -50,6 +63,7 @@ def query_data():
     for r in cur:
         v = dict(r)
         v['nickname'] = nickname_map.get(v['account_name'], v['account_name'])
+        v['url'] = v.get('url') or build_url(v)
         videos.append(v)
 
     conn.close()
