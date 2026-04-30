@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design System (Airbnb Inspired) ────────────────── */
+:root {
+  --primary: #ff385c;
+  --primary-active: #e00b41;
+  --primary-disabled: #ffd1da;
+  --ink: #222222;
+  --body: #3f3f3f;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --hairline: #dddddd;
+  --hairline-soft: #ebebeb;
+  --border-strong: #c1c1c1;
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
+  --on-primary: #ffffff;
+  --legal-link: #428bff;
+
+  --rounded-sm: 8px;
+  --rounded-md: 14px;
+  --rounded-lg: 20px;
+  --rounded-full: 9999px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+/* ── Layout ─────────────────────────────────────── */
+.app { max-width: 1280px; margin: 0 auto; padding: var(--space-lg); }
+
+/* ── Top Nav ────────────────────────────────────── */
+.top-nav {
+  display: flex; align-items: center; height: 64px;
+  border-bottom: 1px solid var(--hairline-soft);
+  margin-bottom: var(--space-xl);
+  gap: var(--space-lg);
+}
+.top-nav .logo {
+  font-size: 20px; font-weight: 600; color: var(--primary);
+  letter-spacing: -0.3px;
+}
+.top-nav .logo span { color: var(--ink); }
+.top-nav .nav-tabs { display: flex; gap: var(--space-lg); flex: 1; justify-content: center; }
+.top-nav .nav-tabs a {
+  text-decoration: none; font-size: 16px; font-weight: 600; color: var(--muted);
+  padding-bottom: 18px; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.top-nav .nav-tabs a.active { color: var(--ink); border-bottom-color: var(--ink); }
+.top-nav .nav-right { display: flex; gap: var(--space-md); align-items: center; }
+.top-nav .nav-right a { text-decoration: none; color: var(--muted); font-size: 14px; cursor: pointer; }
+.top-nav .nav-right a:hover { color: var(--ink); }
+
+/* ── Stats Bar ───────────────────────────────────── */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-base);
+  margin-bottom: var(--space-xl);
+}
+.stat-card {
+  background: var(--surface-soft); border-radius: var(--rounded-md);
+  padding: var(--space-lg); text-align: center;
+}
+.stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--ink); }
+.stat-card .stat-label { font-size: 14px; color: var(--muted); margin-top: var(--space-xs); }
+
+/* ── Search Bar ──────────────────────────────────── */
+.search-bar {
+  display: flex; align-items: center;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--rounded-full);
+  height: 56px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: var(--space-xl);
+  overflow: hidden;
+}
+.search-field {
+  flex: 1; padding: 0 var(--space-lg); cursor: pointer;
+  border-right: 1px solid var(--hairline);
+}
+.search-field:last-of-type { border-right: none; }
+.search-field .label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.search-field .value { font-size: 14px; color: var(--ink); margin-top: 2px; }
+.search-btn {
+  width: 48px; height: 48px; border-radius: var(--rounded-full);
+  background: var(--primary); border: none; cursor: pointer;
+  margin-right: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.search-btn svg { width: 18px; height: 18px; stroke: white; stroke-width: 2.5; fill: none; }
+
+/* ── Filter Tags ─────────────────────────────────── */
+.filter-strip {
+  display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg);
+  overflow-x: auto; padding-bottom: var(--space-sm);
+}
+.filter-tag {
+  padding: 8px 16px; border-radius: var(--rounded-full);
+  background: var(--canvas); border: 1px solid var(--hairline);
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.filter-tag:hover { border-color: var(--ink); color: var(--ink); }
+.filter-tag.active { background: var(--ink); color: var(--on-primary); border-color: var(--ink); }
+
+/* ── Cards Grid ──────────────────────────────────── */
+.card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+.card {
+  background: var(--canvas); border-radius: var(--rounded-md);
+  border: 1px solid var(--hairline-soft);
+  overflow: hidden; transition: box-shadow 0.2s;
+}
+.card:hover { box-shadow: var(--shadow-card); }
+
+.card-header {
+  padding: var(--space-base) var(--space-base) var(--space-sm);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.card-header .platform-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px;
+  border-radius: var(--rounded-full); background: var(--surface-strong);
+}
+.card-header .account-name { font-size: 13px; color: var(--muted); }
+.card-body { padding: 0 var(--space-base) var(--space-base); }
+.card-body .video-title {
+  font-size: 16px; font-weight: 500; line-height: 1.25;
+  margin-bottom: var(--space-sm); display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-body .video-id { font-size: 12px; color: var(--muted-soft); margin-bottom: var(--space-sm); font-family: monospace; }
+.card-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm);
+  padding-top: var(--space-sm); border-top: 1px solid var(--hairline-soft);
+}
+.stat-item { text-align: center; }
+.stat-item .num { font-size: 16px; font-weight: 600; color: var(--ink); }
+.stat-item .label { font-size: 11px; color: var(--muted-soft); text-transform: uppercase; letter-spacing: 0.2px; }
+.card-time { font-size: 12px; color: var(--muted-soft); padding: var(--space-sm) var(--space-base) var(--space-base); }
+
+/* ── Loading ─────────────────────────────────────── */
+.loading {
+  text-align: center; padding: var(--space-xxl); color: var(--muted);
+}
+.loading .spinner {
+  width: 32px; height: 32px; border: 3px solid var(--hairline);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.7s linear infinite; margin: 0 auto var(--space-base);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Empty ───────────────────────────────────────── */
+.empty { text-align: center; padding: var(--space-xxl); color: var(--muted); }
+.empty svg { width: 48px; height: 48px; stroke: var(--hairline); margin-bottom: var(--space-base); }
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 744px) {
+  .app { padding: var(--space-base); }
+  .top-nav .nav-tabs { display: none; }
+  .stats-bar { grid-template-columns: repeat(3, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+  .search-bar { height: 48px; }
+  .search-field .value { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="logo">📡 <span>Social Monitor</span></div>
+    <div class="nav-tabs">
+      <a class="active" @click="setTab('all')">All</a>
+      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')">抖音</a>
+      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')">快手</a>
+      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')">小红书</a>
+      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')">视频号</a>
+    </div>
+    <div class="nav-right">
+      <a @click="refreshData">🔄 刷新</a>
+      <select v-model="refreshInterval" @change="setAutoRefresh" style="font-size:13px;padding:4px 8px;border:1px solid var(--hairline);border-radius:var(--rounded-sm);background:var(--canvas);color:var(--muted);cursor:pointer;">
+        <option value="0">手动刷新</option>
+        <option value="30">每30秒</option>
+        <option value="60">每1分</option>
+        <option value="300">每5分</option>
+      </select>
+    </div>
+  </nav>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-value">{{ stats.accounts }}</div><div class="stat-label">账号</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.videos }}</div><div class="stat-label">视频</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.snapshots }}</div><div class="stat-label">快照</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.lastCollect }}</div><div class="stat-label">上次采集</div></div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <div class="search-field" style="flex:2">
+      <div class="label">搜索</div>
+      <input class="value" v-model="searchQuery" placeholder="搜索标题、视频ID、账号..." style="border:none;outline:none;width:100%;background:transparent;font-family:var(--font);font-size:14px;">
+    </div>
+    <div class="search-field">
+      <div class="label">排序</div>
+      <select v-model="sortBy" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--font);">
+        <option value="play_count">播放量</option>
+        <option value="digg_count">点赞数</option>
+        <option value="comment_count">评论数</option>
+        <option value="first_seen">发布时间</option>
+      </select>
+    </div>
+    <div class="search-field">
+      <div class="label">顺序</div>
+      <select v-model="sortOrder" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--font);">
+        <option value="desc">降序</option>
+        <option value="asc">升序</option>
+      </select>
+    </div>
+    <button class="search-btn" @click="refreshData">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    </button>
+  </div>
+
+  <!-- Filter Strip -->
+  <div class="filter-strip">
+    <span class="filter-tag" :class="{active: !accountFilter}" @click="accountFilter=''">全部账号</span>
+    <span v-for="a in accountOptions" :key="a.key" class="filter-tag" :class="{active: accountFilter===a.key}" @click="accountFilter=a.key">
+      {{ a.label }}
+    </span>
+  </div>
+
+  <!-- Loading -->
+  <div v-if="loading" class="loading">
+    <div class="spinner"></div>
+    <div>加载中...</div>
+  </div>
+
+  <!-- Empty -->
+  <div v-else-if="filteredVideos.length === 0" class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    <div>暂无数据</div>
+  </div>
+
+  <!-- Card Grid -->
+  <div v-else class="card-grid">
+    <div v-for="v in filteredVideos" :key="v.aweme_id" class="card">
+      <div class="card-header">
+        <span class="platform-badge">{{ platformLabel(v.platform) }}</span>
+        <span class="account-name">{{ accountLabel(v) }}</span>
+      </div>
+      <div class="card-body">
+        <div class="video-title">{{ v.title || '(无标题)' }}</div>
+        <div class="video-id">{{ v.aweme_id }}</div>
+        <div class="card-stats">
+          <div class="stat-item"><div class="num">{{ v.play_count }}</div><div class="label">播放</div></div>
+          <div class="stat-item"><div class="num">{{ v.digg_count }}</div><div class="label">点赞</div></div>
+          <div class="stat-item"><div class="num">{{ v.comment_count }}</div><div class="label">评论</div></div>
+          <div class="stat-item"><div class="num">{{ v.share_count }}</div><div class="label">分享</div></div>
+        </div>
+      </div>
+      <div class="card-time">🕐 {{ publishTime(v) }}</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, onMounted, watch } = Vue;
+
+createApp({
+  setup() {
+    const tab = ref('all');
+    const searchQuery = ref('');
+    const sortBy = ref('first_seen');
+    const sortOrder = ref('desc');
+    const accountFilter = ref('');
+    const loading = ref(false);
+    const refreshInterval = ref(0);
+    let timer = null;
+
+    const data = ref({ accounts: [], videos: [] });
+    const stats = computed(() => {
+      const v = data.value.videos;
+      // 按当前筛选条件过滤
+      let filtered = v;
+      if (tab.value !== 'all') {
+        filtered = filtered.filter(x => x.platform === tab.value);
+      }
+      if (accountFilter.value) {
+        filtered = filtered.filter(x => x.account_name === accountFilter.value);
+      }
+      const uniqueAccounts = new Set(filtered.map(x => x.account_name));
+      const uniqueVideos = new Set(filtered.map(x => x.aweme_id));
+      const latest = filtered.reduce((a, b) => a.collected_at > b.collected_at ? a : b, filtered[0]);
+      const totalViews = filtered.reduce((sum, x) => sum + (x.play_count || 0), 0);
+      return {
+        accounts: uniqueAccounts.size,
+        videos: uniqueVideos.size,
+        snapshots: filtered.length,
+        lastCollect: latest ? latest.collected_at.slice(5, 16) : '-',
+        totalViews: totalViews.toLocaleString(),
+      };
+    });
+    const accounts = computed(() => [...new Set(data.value.accounts.map(a => a.account_name))]);
+
+    const accountOptions = computed(() => {
+      const map = {};
+      data.value.accounts.forEach(a => {
+        map[a.account_name] = a.nickname || a.account_name;
+      });
+      // 只显示当前平台+当前筛选的视频中出现的账号
+      const visibleAccounts = new Set(
+        data.value.videos
+          .filter(v => tab.value === 'all' || v.platform === tab.value)
+          .map(v => v.account_name)
+      );
+      return [...visibleAccounts]
+        .sort()
+        .map(key => ({ key, label: `${map[key] || key}【${key}】` }));
+    });
+
+    function accountLabel(v) {
+      return `${v.nickname || v.account_name}【${v.account_name}】`;
+    }
+
+    function publishTime(v) {
+      if (v.first_seen) {
+        // 小红书格式: "2026年04月24日 11:24"
+        const xhsMatch = v.first_seen.match(/(\d{4})年(\d{2})月(\d{2})日\s+(\d{2}):(\d{2})/);
+        if (xhsMatch) {
+          return `${xhsMatch[2]}/${xhsMatch[3]} ${xhsMatch[4]}:${xhsMatch[5]}`;
+        }
+        // 标准格式: "2026-04-29 14:34:55"
+        const parts = v.first_seen.split(' ');
+        if (parts.length === 2) {
+          const dateParts = parts[0].split('-');
+          const timeParts = parts[1].split(':');
+          if (dateParts.length === 3 && timeParts.length >= 2) {
+            return `${dateParts[1]}/${dateParts[2]} ${timeParts[0]}:${timeParts[1]}`;
+          }
+        }
+        return v.first_seen;
+      }
+      return v.collected_at || '';
+    }
+
+    function platformLabel(p) {
+      const map = { douyin: '🎵 抖音', kuaishou: '🎬 快手', xiaohongshu: '📕 小红书', shipinhao: '📺 视频号' };
+      return map[p] || p;
+    }
+
+    const filteredVideos = computed(() => {
+      let list = data.value.videos.filter(v => {
+        if (tab.value !== 'all' && v.platform !== tab.value) return false;
+        if (accountFilter.value && v.account_name !== accountFilter.value) return false;
+        if (searchQuery.value) {
+          const q = searchQuery.value.toLowerCase();
+          return (v.title || '').toLowerCase().includes(q)
+              || v.aweme_id.toLowerCase().includes(q)
+              || v.account_name.toLowerCase().includes(q);
+        }
+        return true;
+      });
+      list.sort((a, b) => {
+        const dir = sortOrder.value === 'desc' ? -1 : 1;
+        if (sortBy.value === 'first_seen') {
+          return dir * (a.first_seen < b.first_seen ? -1 : 1);
+        }
+        return dir * ((a[sortBy.value] || 0) - (b[sortBy.value] || 0));
+      });
+      return list;
+    });
+
+    async function refreshData() {
+      loading.value = true;
+      try {
+        const resp = await fetch('/api/data');
+        const d = await resp.json();
+        data.value = d;
+      } catch (e) {
+        console.error('Failed to fetch:', e);
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    function setTab(t) { tab.value = t; }
+
+    function setAutoRefresh() {
+      if (timer) clearInterval(timer);
+      if (refreshInterval.value > 0) {
+        timer = setInterval(refreshData, refreshInterval.value * 1000);
+      }
+    }
+
+    onMounted(() => { refreshData(); });
+
+    return {
+      tab, searchQuery, sortBy, sortOrder, accountFilter,
+      loading, refreshInterval,
+      data, stats, accounts, accountOptions, filteredVideos,
+      platformLabel, accountLabel, publishTime,
+      refreshData, setTab, setAutoRefresh,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
