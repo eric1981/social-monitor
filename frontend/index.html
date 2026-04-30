@@ -256,10 +256,10 @@ body {
     <div class="logo">📡 <span>Social Monitor</span></div>
     <div class="nav-tabs">
       <a class="active" @click="setTab('all')">All</a>
-      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')"><img src="抖音.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 抖音</a>
-      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="快手.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
-      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="小红书.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
-      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="视频号.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
+      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')"><img src="douyin.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 抖音</a>
+      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="kuaishou.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
+      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
+      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
     </div>
     <div class="nav-right">
       <a @click="refreshData">🔄 刷新</a>
@@ -475,10 +475,10 @@ createApp({
 
     function platformLabel(p) {
       const icons = {
-        douyin: '<img src="抖音.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 抖音',
-        kuaishou: '<img src="快手.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 快手',
-        xiaohongshu: '<img src="小红书.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 小红书',
-        shipinhao: '<img src="视频号.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 视频号',
+        douyin: '<img src="douyin.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 抖音',
+        kuaishou: '<img src="kuaishou.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 快手',
+        xiaohongshu: '<img src="xiaohongshu.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 小红书',
+        shipinhao: '<img src="shipinhao.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"> 视频号',
       };
       return icons[p] || p;
     }

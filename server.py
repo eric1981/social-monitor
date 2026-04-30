@@ -18,8 +18,6 @@ FRONTEND_DIR = MONITOR_DIR / "frontend"
 COLLECTOR = MONITOR_DIR / "collector.py"
 PORT = 5408
 
-WIN_LOGIN = r"C:\Users\NINGMEI\Desktop\social-monitor\win_login.py"
-
 
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
@@ -28,9 +26,7 @@ def get_db():
 
 
 def query_data():
-    """从数据库读取数据，返回前端需要的格式"""
     conn = get_db()
-
     accounts = [
         dict(r) for r in conn.execute(
             'SELECT id, platform, account_name, nickname, is_active FROM accounts WHERE is_active=1'
@@ -85,22 +81,6 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 json_response(self, {'error': str(e)}, 500)
 
-        elif parsed.path == '/api/collect':
-            try:
-                result = subprocess.run(
-                    ['python3', str(COLLECTOR), '--platform', 'douyin'],
-                    capture_output=True, text=False, timeout=300
-                )
-                out = result.stdout.decode('utf-8', errors='replace') if result.stdout else ''
-                err = result.stderr.decode('gbk', errors='replace') if result.stderr else ''
-                json_response(self, {
-                    'status': 'ok' if result.returncode == 0 else 'error',
-                    'output': out[-1000:],
-                    'error': err[-500:],
-                })
-            except Exception as e:
-                json_response(self, {'error': str(e)}, 500)
-
         elif parsed.path == '/api/accounts':
             conn = get_db()
             accounts = [
@@ -130,60 +110,52 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         if parsed.path == '/api/login':
-            try:
-                body = json.loads(read_body(self))
-                platform = body.get('platform', '')
-                account_name = body.get('account_name', '')
+            body = json.loads(read_body(self))
+            platform = body.get('platform', '')
+            account_name = body.get('account_name', '')
 
-                if not platform or not account_name:
-                    json_response(self, {'error': '缺少 platform 或 account_name'}, 400)
-                    return
+            if not platform or not account_name:
+                json_response(self, {'error': '缺少 platform 或 account_name'}, 400)
+                return
 
-                # 异步启动扫码窗口
-                result = subprocess.run(
-                    ['cmd.exe', '/c', 'python', WIN_LOGIN, platform, account_name],
-                    capture_output=True, text=False, timeout=180
-                )
-                out = result.stdout.decode('gbk', errors='replace') if result.stdout else ''
-                err = result.stderr.decode('gbk', errors='replace') if result.stderr else ''
+            conn = get_db()
+            dup = conn.execute(
+                'SELECT id FROM accounts WHERE platform=? AND account_name=?',
+                (platform, account_name)
+            ).fetchone()
+            if dup:
+                conn.close()
+                json_response(self, {'status': 'error', 'message': f'{platform}/{account_name} 已存在'})
+                return
 
-                if 'OK' in out:
-                    # 入库
-                    conn = get_db()
-                    conn.execute(
-                        'INSERT OR IGNORE INTO accounts (platform, account_name, is_active) VALUES (?, ?, 1)',
-                        (platform, account_name)
-                    )
-                    conn.commit()
-                    conn.close()
+            conn.execute(
+                'INSERT OR IGNORE INTO accounts (platform, account_name, is_active) VALUES (?, ?, 0)',
+                (platform, account_name)
+            )
+            conn.commit()
+            conn.close()
 
-                    # 触发第一次采集
-                    subprocess.Popen(
-                        ['python3', str(COLLECTOR), '--platform', platform, '--account', account_name],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                    )
+            subprocess.Popen(
+                ['cmd.exe', '/c', 'python',
+                 r'C:\Users\NINGMEI\Desktop\social-monitor\win_login.py',
+                 platform, account_name],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
 
-                    json_response(self, {'status': 'ok', 'message': f'{platform}/{account_name} 登录成功'})
-                else:
-                    json_response(self, {'status': 'error', 'message': out[-300:] or err[-300:]})
-
-            except subprocess.TimeoutExpired:
-                json_response(self, {'status': 'timeout', 'message': '扫码超时（3分钟）'})
-            except Exception as e:
-                json_response(self, {'error': str(e)}, 500)
+            json_response(self, {
+                'status': 'ok',
+                'message': f'扫码窗口已打开，请在 Windows 上扫码登录 {platform}',
+            })
 
         elif parsed.path == '/api/account/toggle':
-            try:
-                body = json.loads(read_body(self))
-                account_id = body.get('id')
-                is_active = body.get('is_active', 1)
-                conn = get_db()
-                conn.execute('UPDATE accounts SET is_active=? WHERE id=?', (is_active, account_id))
-                conn.commit()
-                conn.close()
-                json_response(self, {'status': 'ok'})
-            except Exception as e:
-                json_response(self, {'error': str(e)}, 500)
+            body = json.loads(read_body(self))
+            account_id = body.get('id')
+            is_active = body.get('is_active', 1)
+            conn = get_db()
+            conn.execute('UPDATE accounts SET is_active=? WHERE id=?', (is_active, account_id))
+            conn.commit()
+            conn.close()
+            json_response(self, {'status': 'ok'})
 
         else:
             json_response(self, {'error': 'not found'}, 404)
