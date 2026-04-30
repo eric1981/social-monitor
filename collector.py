@@ -64,6 +64,8 @@ def ensure_video(conn, account_id, platform, account_name, aweme_id, title,
     if row:
         if title and title != row['title']:
             conn.execute('UPDATE videos SET title=? WHERE id=?', (title, row['id']))
+        if url:
+            conn.execute('UPDATE videos SET url=? WHERE id=? AND url=""', (url, row['id']))
         return row['id'], False
     else:
         conn.execute(
@@ -288,7 +290,9 @@ def collect_kuaishou(conn, account):
 
         video_id, is_new = ensure_video(
             conn, account_id, 'kuaishou', account_name,
-            aweme_id, title, 0, '', str(create_time) if create_time else None
+            aweme_id, title, 0,
+            f'https://www.kuaishou.com/short-video/{photo_id}' if photo_id else '',
+            str(create_time) if create_time else None
         )
         if is_new:
             new_count += 1
