@@ -14,6 +14,9 @@ Thumbs.db
 # 临时文件（Windows 侧采集中间结果）
 tmp/
 
+# cookie 缓存（各平台登录态）
+cookies/
+
 # 登录二维码
 *_qrcode_*.png
 *_login_*.png
