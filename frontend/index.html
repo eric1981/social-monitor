@@ -84,6 +84,8 @@ body {
 .stat-card {
   background: var(--surface-soft); border-radius: var(--rounded-md);
   padding: var(--space-lg); text-align: center;
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 80px;
 }
 .stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--ink); }
 .stat-card .stat-label { font-size: 14px; color: var(--muted); margin-top: var(--space-xs); }
@@ -301,6 +303,14 @@ body {
       <input class="value" v-model="searchQuery" placeholder="搜索标题、视频ID、账号..." style="border:none;outline:none;width:100%;background:transparent;font-family:var(--font);font-size:14px;">
     </div>
     <div class="search-field">
+      <div class="label">发布时间从</div>
+      <input type="date" v-model="dateFrom" class="value" style="border:none;outline:none;width:100%;background:transparent;font-family:var(--font);font-size:14px;cursor:pointer;">
+    </div>
+    <div class="search-field">
+      <div class="label">到</div>
+      <input type="date" v-model="dateTo" class="value" style="border:none;outline:none;width:100%;background:transparent;font-family:var(--font);font-size:14px;cursor:pointer;">
+    </div>
+    <div class="search-field">
       <div class="label">排序</div>
       <select v-model="sortBy" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--font);">
         <option value="play_count">播放量</option>
@@ -418,6 +428,8 @@ createApp({
   setup() {
     const tab = ref('all');
     const searchQuery = ref('');
+    const dateFrom = ref('');
+    const dateTo = ref('');
     const sortBy = ref('first_seen');
     const sortOrder = ref('desc');
     const accountFilter = ref('');
@@ -528,6 +540,12 @@ createApp({
       let list = data.value.videos.filter(v => {
         if (tab.value !== 'all' && v.platform !== tab.value) return false;
         if (accountFilter.value && v.account_name !== accountFilter.value) return false;
+        // 日期筛选（按 first_seen 的前 10 位比较：YYYY-MM-DD）
+        if (dateFrom.value || dateTo.value) {
+          const d = (v.first_seen || '').slice(0, 10);
+          if (dateFrom.value && d < dateFrom.value) return false;
+          if (dateTo.value && d > dateTo.value) return false;
+        }
         if (searchQuery.value) {
           const q = searchQuery.value.toLowerCase();
           return (v.title || '').toLowerCase().includes(q)
@@ -645,7 +663,7 @@ createApp({
     });
 
     return {
-      tab, searchQuery, sortBy, sortOrder, accountFilter,
+      tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
       loading, refreshInterval, collecting,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       platformLabel, accountLabel, publishTime,
