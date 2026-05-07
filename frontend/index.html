@@ -383,7 +383,7 @@ body {
           <label class="form-label">已有账号（选填）</label>
           <select v-model="loginAccount" class="form-select">
             <option value="">— 手动输入新账号名 —</option>
-            <option v-for="a in accountOptions" :key="a.key" :value="a.key">{{ a.label }}</option>
+            <option v-for="a in accountOptionsWithPlatform" :key="a.key" :value="a.key">{{ a.label }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -468,6 +468,20 @@ createApp({
       return [...visibleAccounts]
         .sort()
         .map(key => ({ key, label: `${map[key] || key}` }));
+    });
+
+    const accountOptionsWithPlatform = computed(() => {
+      const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
+      const nickMap = {};
+      const platMap = {};
+      data.value.accounts.forEach(a => {
+        nickMap[a.account_name] = a.nickname || a.account_name;
+        platMap[a.account_name] = platformLabels[a.platform] || a.platform;
+      });
+      return data.value.accounts
+        .filter(a => a.is_active)
+        .sort((a, b) => a.platform.localeCompare(b.platform) || a.account_name.localeCompare(b.account_name))
+        .map(a => ({ key: a.account_name, label: `${platMap[a.account_name]}：${nickMap[a.account_name]}` }));
     });
 
     function accountLabel(v) {
@@ -605,7 +619,7 @@ createApp({
     return {
       tab, searchQuery, sortBy, sortOrder, accountFilter,
       loading, refreshInterval,
-      data, stats, accounts, accountOptions, filteredVideos,
+      data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       platformLabel, accountLabel, publishTime,
       refreshData, setTab, setAutoRefresh,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
