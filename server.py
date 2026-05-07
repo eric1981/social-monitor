@@ -58,10 +58,19 @@ def query_data():
         WHERE s.collected_at = (
             SELECT MAX(s2.collected_at) FROM snapshots s2 WHERE s2.video_id = s.video_id
         )
-        ORDER BY s.play_count DESC
     ''')
     for r in cur:
         v = dict(r)
+        # 标准化 first_seen 格式：统一为 "YYYY-MM-DD HH:MM:SS"
+        raw = v.get('first_seen', '') or ''
+        if '年' in raw:
+            try:
+                parts = raw.replace('年', '-').replace('月', '-').replace('日', '').split(' ')
+                dparts = parts[0].split('-')
+                if len(dparts) == 3:
+                    v['first_seen'] = f"{dparts[0].strip()}-{dparts[1].strip().zfill(2)}-{dparts[2].strip().zfill(2)} {parts[1].strip() if len(parts) > 1 else '00:00'}:00"
+            except:
+                pass
         v['nickname'] = nickname_map.get(v['account_name'], v['account_name'])
         v['url'] = v.get('url') or build_url(v)
         videos.append(v)

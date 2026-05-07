@@ -504,7 +504,10 @@ createApp({
       list.sort((a, b) => {
         const dir = sortOrder.value === 'desc' ? -1 : 1;
         if (sortBy.value === 'first_seen') {
-          return dir * (a.first_seen < b.first_seen ? -1 : 1);
+          // 按发布时间降序 + aweme_id 二级排序确保跨平台交错
+          const cmp = a.first_seen < b.first_seen ? -1 : (a.first_seen > b.first_seen ? 1 : 0);
+          if (cmp !== 0) return dir * cmp;
+          return dir * (a.aweme_id < b.aweme_id ? -1 : 1);
         }
         return dir * ((a[sortBy.value] || 0) - (b[sortBy.value] || 0));
       });

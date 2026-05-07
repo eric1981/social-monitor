@@ -155,8 +155,8 @@ def collect_douyin(conn, account):
         print(f"  [抖音] {account_name} — 无视频数据", flush=True)
         return
 
-    # 自动更新昵称（仅在 nickname 为空时，昵称不需要每天采集）
-    if nickname and not account['nickname']:
+    # 自动更新昵称
+    if nickname and nickname != account['nickname']:
         conn.execute(
             'UPDATE accounts SET nickname=? WHERE id=?',
             (nickname, account_id)
@@ -259,8 +259,8 @@ def collect_kuaishou(conn, account):
         print(f"  [快手] {account_name} — 无视频数据", flush=True)
         return
 
-    # 自动更新昵称（仅在为空时）
-    if nickname and not account['nickname']:
+    # 自动更新昵称
+    if nickname and nickname != account['nickname']:
         conn.execute(
             'UPDATE accounts SET nickname=? WHERE id=?',
             (nickname, account_id)
@@ -353,7 +353,7 @@ def collect_xiaohongshu(conn, account):
         print(f"  [小红书] {account_name} — 无视频数据", flush=True)
         return
 
-    if nickname and not account['nickname']:
+    if nickname and nickname != account['nickname']:
         conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
         print(f"  [小红书] {account_name} — 更新昵称: {nickname}", flush=True)
 
@@ -447,9 +447,9 @@ def collect_shipinhao(conn, account):
         print(f"  [视频号] {account_name} — 无视频数据", flush=True)
         return
 
-    if nickname and not account['nickname']:
+    if nickname:
         nick_clean = nickname.replace('\n', '').strip()
-        if nick_clean:
+        if nick_clean and nick_clean != account['nickname']:
             conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nick_clean[:30], account_id))
             print(f"  [视频号] {account_name} — 更新昵称: {nick_clean}", flush=True)
 
