@@ -78,7 +78,7 @@ body {
 
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-base);
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-base);
   margin-bottom: var(--space-xl);
 }
 .stat-card {
@@ -282,6 +282,7 @@ body {
     <div class="stat-card"><div class="stat-value">{{ stats.videos }}</div><div class="stat-label">视频</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.snapshots }}</div><div class="stat-label">快照</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.yesterdayViews }}</div><div class="stat-label">昨日播放</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.lastCollect }}</div><div class="stat-label">上次采集</div></div>
   </div>
 
@@ -428,12 +429,14 @@ createApp({
       const uniqueVideos = new Set(filtered.map(x => x.aweme_id));
       const latest = filtered.reduce((a, b) => a.collected_at > b.collected_at ? a : b, filtered[0]);
       const totalViews = filtered.reduce((sum, x) => sum + (x.play_count || 0), 0);
+      const yesterdayViews = filtered.reduce((sum, x) => sum + (x.yesterday_views || 0), 0);
       return {
         accounts: uniqueAccounts.size,
         videos: uniqueVideos.size,
         snapshots: filtered.length,
         lastCollect: latest ? latest.collected_at.slice(5, 16) : '-',
         totalViews: totalViews.toLocaleString(),
+        yesterdayViews: yesterdayViews.toLocaleString(),
       };
     });
     const accounts = computed(() => [...new Set(data.value.accounts.map(a => a.account_name))]);
@@ -451,11 +454,11 @@ createApp({
       );
       return [...visibleAccounts]
         .sort()
-        .map(key => ({ key, label: `${map[key] || key}【${key}】` }));
+        .map(key => ({ key, label: `${map[key] || key}` }));
     });
 
     function accountLabel(v) {
-      return `${v.nickname || v.account_name}【${v.account_name}】`;
+      return `${v.nickname || v.account_name}`;
     }
 
     function publishTime(v) {

@@ -7,7 +7,7 @@ Social Monitor — 轻量 API 服务
 import json
 import sqlite3
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
@@ -48,8 +48,34 @@ def query_data():
         return ''
 
     videos = []
+    # 计算昨日和前天的日期边界，取当天最后一次采集时间
+    now = datetime.now()
+    yesterday_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    yesterday_end = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_before_start = yesterday_start - timedelta(days=1)
+
+    def get_day_latest(conn, start, end):
+        row = conn.execute(
+            'SELECT MAX(collected_at) as t FROM snapshots WHERE collected_at >= ? AND collected_at < ?',
+            (start.strftime('%Y-%m-%d %H:%M:%S'), end.strftime('%Y-%m-%d %H:%M:%S'))
+        ).fetchone()
+        return row['t'] if row and row['t'] else None
+
+    yesterday_ts = get_day_latest(conn, yesterday_start, yesterday_end)
+    day_before_ts = get_day_latest(conn, day_before_start, yesterday_start)
+
+    # 预加载昨日和前天的快照数据：{video_id: play_count}
+    yesterday_plays = {}
+    day_before_plays = {}
+    if yesterday_ts:
+        for r in conn.execute('SELECT video_id, play_count FROM snapshots WHERE collected_at=?', (yesterday_ts,)):
+            yesterday_plays[r['video_id']] = r['play_count']
+    if day_before_ts:
+        for r in conn.execute('SELECT video_id, play_count FROM snapshots WHERE collected_at=?', (day_before_ts,)):
+            day_before_plays[r['video_id']] = r['play_count']
+
     cur = conn.execute('''
-        SELECT v.platform, v.account_name, v.aweme_id, v.title,
+        SELECT v.id, v.platform, v.account_name, v.aweme_id, v.title,
                v.first_seen, v.url,
                s.collected_at, s.play_count, s.digg_count,
                s.comment_count, s.share_count, s.collect_count
@@ -71,6 +97,11 @@ def query_data():
                     v['first_seen'] = f"{dparts[0].strip()}-{dparts[1].strip().zfill(2)}-{dparts[2].strip().zfill(2)} {parts[1].strip() if len(parts) > 1 else '00:00'}:00"
             except:
                 pass
+        # 昨日播放增量：昨天最后采集的播放量 - 前天最后采集的播放量
+        today_play = v['play_count']
+        yesterday_play = yesterday_plays.get(v['id'], 0)
+        day_before_play = day_before_plays.get(v['id'], 0)
+        v['yesterday_views'] = yesterday_play - day_before_play  # 单日新增
         v['nickname'] = nickname_map.get(v['account_name'], v['account_name'])
         v['url'] = v.get('url') or build_url(v)
         videos.append(v)
