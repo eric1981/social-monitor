@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Social Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -370,7 +371,7 @@ body {
     <a v-for="v in filteredVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
       <div class="card">
         <div class="card-cover" v-if="v.cover_url">
-          <img :src="v.cover_url" alt="" loading="lazy" @error="e => e.target.parentElement.style.display='none'">
+          <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="e => e.target.parentElement.style.display='none'">
         </div>
         <div class="card-header">
           <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
@@ -552,6 +553,11 @@ createApp({
       return icons[p] || p;
     }
 
+    function proxyImage(url) {
+      if (!url) return '';
+      return '/proxy/image?url=' + encodeURIComponent(url);
+    }
+
     const filteredVideos = computed(() => {
       let list = data.value.videos.filter(v => {
         if (tab.value !== 'all' && v.platform !== tab.value) return false;
@@ -698,9 +704,9 @@ createApp({
 
     return {
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
-      loading, refreshInterval, collecting,
+      loading, refreshInterval, collecting, collectProgress,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
-      platformLabel, accountLabel, publishTime,
+      platformLabel, accountLabel, publishTime, proxyImage,
       refreshData, setTab, setAutoRefresh, triggerCollect,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
