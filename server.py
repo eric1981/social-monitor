@@ -211,6 +211,10 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == '/api/collect':
             # 后台触发一次全平台采集
             try:
+                # 记录开始时间
+                status_path = MONITOR_DIR / 'collect_status.json'
+                with open(status_path, 'w') as f:
+                    json.dump({'status': 'running', 'started': datetime.now().strftime('%H:%M:%S'), 'progress': '启动中...'}, f)
                 subprocess.Popen(
                     [sys.executable or 'python3', str(COLLECTOR)],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -219,6 +223,18 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, {'status': 'ok', 'message': '采集已启动'})
             except Exception as e:
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
+
+        elif parsed.path == '/api/collect/status':
+            status_path = MONITOR_DIR / 'collect_status.json'
+            if status_path.exists():
+                try:
+                    with open(status_path) as f:
+                        st = json.load(f)
+                    json_response(self, st)
+                except:
+                    json_response(self, {'status': 'unknown'})
+            else:
+                json_response(self, {'status': 'idle'})
 
         else:
             json_response(self, {'error': 'not found'}, 404)

@@ -522,6 +522,22 @@ def collect_platform(conn, platform: str, accounts):
             print(f"  [错误] {platform}/{acct['account_name']}: {e}", flush=True)
 
 
+def write_status(status, progress='', done=0, total=0):
+    """写入采集状态文件，供前端轮询"""
+    import json
+    status_path = MONITOR_DIR / 'collect_status.json'
+    try:
+        with open(status_path, 'w') as f:
+            json.dump({
+                'status': status,
+                'progress': progress,
+                'done': done,
+                'total': total,
+            }, f)
+    except:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description='Social Monitor Collector')
     parser.add_argument('--platform', choices=['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'])
@@ -537,11 +553,14 @@ def main():
         sys.exit(0)
 
     print(f"📡 Social Monitor — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    write_status('running', '启动...', 0, len(accounts))
 
     platforms = {}
     for acct in accounts:
         platforms.setdefault(acct['platform'], []).append(acct)
 
+    total = len(accounts)
+    done = 0
     for platform, accts in platforms.items():
         if args.dry_run:
             print(f"\n  [DRY-RUN] {platform}: {len(accts)} 个账号")
@@ -553,8 +572,11 @@ def main():
                 print(f"    - {a['account_name']}{extra}")
         else:
             collect_platform(conn, platform, accts)
+            done += len(accts)
+            write_status('running', f'{platform} 完成', done, total)
 
     conn.close()
+    write_status('success', '全部完成', total, total)
     print(f"\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 

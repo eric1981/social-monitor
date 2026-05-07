@@ -273,7 +273,7 @@ body {
     <div class="nav-right">
       <a @click="triggerCollect" style="cursor:pointer;position:relative;">
         <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:4px;"></span>
-        <span v-else>⬇</span> 抓取
+        <span v-else>⬇</span> 抓取<span v-if="collectProgress" style="margin-left:4px;font-size:12px;color:var(--muted);">({{ collectProgress }})</span>
       </a>
       <a @click="refreshData">🔄 刷新</a>
       <a @click="openLoginModal" style="color:var(--primary);font-weight:600;">+ 新增账号</a>
@@ -442,6 +442,8 @@ createApp({
     const loginBusy = ref(false);
     const loginStatus = ref('');
     const collecting = ref(false);
+    const collectProgress = ref('');
+    let collectTimer = null;
     let timer = null;
 
     const data = ref({ accounts: [], videos: [] });
@@ -583,16 +585,38 @@ createApp({
     async function triggerCollect() {
       if (collecting.value) return;
       collecting.value = true;
+      collectProgress.value = '启动中...';
       try {
         await fetch('/api/collect', { method: 'POST' });
-        // 等 3 秒后自动刷新，给采集一点启动时间
-        setTimeout(() => {
-          refreshData();
-          collecting.value = false;
-        }, 3000);
+        // 轮询采集状态
+        collectTimer = setInterval(async () => {
+          try {
+            const resp = await fetch('/api/collect/status');
+            const st = await resp.json();
+            if (st.status === 'running') {
+              collectProgress.value = st.progress
+                ? `${st.done}/${st.total} ${st.progress}`
+                : '采集中...';
+            } else if (st.status === 'success') {
+              collectProgress.value = '完成 ✓';
+              clearInterval(collectTimer);
+              collectTimer = null;
+              refreshData();
+              setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 2000);
+            } else {
+              collectProgress.value = '未知状态';
+              clearInterval(collectTimer);
+              collectTimer = null;
+              collecting.value = false;
+            }
+          } catch(e) {
+            // 轮询失败继续等
+          }
+        }, 1000);
       } catch (e) {
         console.error('Collect trigger failed:', e);
-        collecting.value = false;
+        collectProgress.value = '启动失败';
+        setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 2000);
       }
     }
 
