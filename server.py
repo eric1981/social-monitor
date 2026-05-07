@@ -177,16 +177,12 @@ class Handler(BaseHTTPRequestHandler):
                 'SELECT id FROM accounts WHERE platform=? AND account_name=?',
                 (platform, account_name)
             ).fetchone()
-            if dup:
-                conn.close()
-                json_response(self, {'status': 'error', 'message': f'{platform}/{account_name} 已存在'})
-                return
-
-            conn.execute(
-                'INSERT OR IGNORE INTO accounts (platform, account_name, is_active) VALUES (?, ?, 0)',
-                (platform, account_name)
-            )
-            conn.commit()
+            if not dup:
+                conn.execute(
+                    'INSERT OR IGNORE INTO accounts (platform, account_name, is_active) VALUES (?, ?, 0)',
+                    (platform, account_name)
+                )
+                conn.commit()
             conn.close()
 
             subprocess.Popen(
