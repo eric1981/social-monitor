@@ -146,6 +146,18 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
             json_response(self, {'accounts': accounts})
 
+        elif parsed.path == '/api/collect/status':
+            status_path = MONITOR_DIR / 'collect_status.json'
+            if status_path.exists():
+                try:
+                    with open(status_path) as f:
+                        st = json.load(f)
+                    json_response(self, st)
+                except:
+                    json_response(self, {'status': 'unknown'})
+            else:
+                json_response(self, {'status': 'idle'})
+
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
             if not filepath.exists() or not filepath.is_file():
@@ -223,18 +235,6 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, {'status': 'ok', 'message': '采集已启动'})
             except Exception as e:
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
-
-        elif parsed.path == '/api/collect/status':
-            status_path = MONITOR_DIR / 'collect_status.json'
-            if status_path.exists():
-                try:
-                    with open(status_path) as f:
-                        st = json.load(f)
-                    json_response(self, st)
-                except:
-                    json_response(self, {'status': 'unknown'})
-            else:
-                json_response(self, {'status': 'idle'})
 
         else:
             json_response(self, {'error': 'not found'}, 404)
