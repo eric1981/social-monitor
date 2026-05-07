@@ -269,6 +269,10 @@ body {
       <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
     </div>
     <div class="nav-right">
+      <a @click="triggerCollect" style="cursor:pointer;position:relative;">
+        <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:4px;"></span>
+        <span v-else>⬇</span> 抓取
+      </a>
       <a @click="refreshData">🔄 刷新</a>
       <a @click="openLoginModal" style="color:var(--primary);font-weight:600;">+ 新增账号</a>
       <select v-model="refreshInterval" @change="setAutoRefresh" style="font-size:13px;padding:4px 8px;border:1px solid var(--hairline);border-radius:var(--rounded-sm);background:var(--canvas);color:var(--muted);cursor:pointer;">
@@ -425,6 +429,7 @@ createApp({
     const loginAccountInput = ref('');
     const loginBusy = ref(false);
     const loginStatus = ref('');
+    const collecting = ref(false);
     let timer = null;
 
     const data = ref({ accounts: [], videos: [] });
@@ -557,6 +562,22 @@ createApp({
       }
     }
 
+    async function triggerCollect() {
+      if (collecting.value) return;
+      collecting.value = true;
+      try {
+        await fetch('/api/collect', { method: 'POST' });
+        // 等 3 秒后自动刷新，给采集一点启动时间
+        setTimeout(() => {
+          refreshData();
+          collecting.value = false;
+        }, 3000);
+      } catch (e) {
+        console.error('Collect trigger failed:', e);
+        collecting.value = false;
+      }
+    }
+
     function openLoginModal() {
       showLoginModal.value = true;
       loginPlatform.value = 'douyin';
@@ -625,10 +646,10 @@ createApp({
 
     return {
       tab, searchQuery, sortBy, sortOrder, accountFilter,
-      loading, refreshInterval,
+      loading, refreshInterval, collecting,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       platformLabel, accountLabel, publishTime,
-      refreshData, setTab, setAutoRefresh,
+      refreshData, setTab, setAutoRefresh, triggerCollect,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
     };

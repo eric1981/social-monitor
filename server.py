@@ -7,6 +7,7 @@ Social Monitor — 轻量 API 服务
 import json
 import sqlite3
 import subprocess
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -206,6 +207,18 @@ class Handler(BaseHTTPRequestHandler):
             conn.commit()
             conn.close()
             json_response(self, {'status': 'ok'})
+
+        elif parsed.path == '/api/collect':
+            # 后台触发一次全平台采集
+            try:
+                subprocess.Popen(
+                    [sys.executable or 'python3', str(COLLECTOR)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    cwd=str(MONITOR_DIR)
+                )
+                json_response(self, {'status': 'ok', 'message': '采集已启动'})
+            except Exception as e:
+                json_response(self, {'status': 'error', 'message': str(e)}, 500)
 
         else:
             json_response(self, {'error': 'not found'}, 404)
