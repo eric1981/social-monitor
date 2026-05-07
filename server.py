@@ -146,17 +146,17 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
             json_response(self, {'accounts': accounts})
 
-        elif parsed.path == '/api/collect/status':
-            status_path = MONITOR_DIR / 'collect_status.json'
-            if status_path.exists():
+        elif parsed.path == '/api/collect/log':
+            log_path = MONITOR_DIR / 'collect_status.json'
+            if log_path.exists():
                 try:
-                    with open(status_path) as f:
+                    with open(log_path) as f:
                         st = json.load(f)
                     json_response(self, st)
                 except:
-                    json_response(self, {'status': 'unknown'})
+                    json_response(self, {'status': 'idle', 'lines': []})
             else:
-                json_response(self, {'status': 'idle'})
+                json_response(self, {'status': 'idle', 'lines': []})
 
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
@@ -223,18 +223,29 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == '/api/collect':
             # 后台触发一次全平台采集
             try:
-                # 记录开始时间
-                status_path = MONITOR_DIR / 'collect_status.json'
-                with open(status_path, 'w') as f:
-                    json.dump({'status': 'running', 'started': datetime.now().strftime('%H:%M:%S'), 'progress': '启动中...'}, f)
+                log_path = MONITOR_DIR / 'collect_status.json'
+                with open(log_path, 'w') as f:
+                    json.dump({'status': 'running', 'lines': []}, f)
                 subprocess.Popen(
                     [sys.executable or 'python3', str(COLLECTOR)],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     cwd=str(MONITOR_DIR)
                 )
-                json_response(self, {'status': 'ok', 'message': '采集已启动'})
+                json_response(self, {'status': 'ok'})
             except Exception as e:
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
+
+        elif parsed.path == '/api/collect/log':
+            log_path = MONITOR_DIR / 'collect_status.json'
+            if log_path.exists():
+                try:
+                    with open(log_path) as f:
+                        st = json.load(f)
+                    json_response(self, st)
+                except:
+                    json_response(self, {'status': 'idle', 'lines': []})
+            else:
+                json_response(self, {'status': 'idle', 'lines': []})
 
         else:
             json_response(self, {'error': 'not found'}, 404)

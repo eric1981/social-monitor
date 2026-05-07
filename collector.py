@@ -527,13 +527,19 @@ def write_status(status, progress='', done=0, total=0):
     import json
     status_path = MONITOR_DIR / 'collect_status.json'
     try:
+        with open(status_path, 'r') as f:
+            existing = json.load(f)
+    except:
+        existing = {'status': 'running', 'lines': []}
+    existing['status'] = status
+    existing['progress'] = progress
+    existing['done'] = done
+    existing['total'] = total
+    if progress and progress not in existing.get('lines', []):
+        existing.setdefault('lines', []).append(progress)
+    try:
         with open(status_path, 'w') as f:
-            json.dump({
-                'status': status,
-                'progress': progress,
-                'done': done,
-                'total': total,
-            }, f)
+            json.dump(existing, f, ensure_ascii=False)
     except:
         pass
 

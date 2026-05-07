@@ -76,6 +76,15 @@ body {
 .top-nav .nav-right a { text-decoration: none; color: var(--muted); font-size: 14px; cursor: pointer; }
 .top-nav .nav-right a:hover { color: var(--ink); }
 
+/* ── Collect Log ──────────────────────────────── */
+.collect-log {
+  background: #1a1a2e; color: #00ff88;
+  border-radius: var(--rounded-md); padding: var(--space-base);
+  margin-bottom: var(--space-lg); max-height: 200px; overflow-y: auto;
+  font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5;
+}
+.collect-log pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-base);
@@ -273,7 +282,7 @@ body {
     <div class="nav-right">
       <a @click="triggerCollect" style="cursor:pointer;position:relative;">
         <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:4px;"></span>
-        <span v-else>⬇</span> 抓取<span v-if="collectProgress" style="margin-left:4px;font-size:12px;color:var(--muted);">({{ collectProgress }})</span>
+        <span v-else>⬇</span> 抓取
       </a>
       <a @click="refreshData">🔄 刷新</a>
       <a @click="openLoginModal" style="color:var(--primary);font-weight:600;">+ 新增账号</a>
@@ -285,6 +294,11 @@ body {
       </select>
     </div>
   </nav>
+
+  <!-- Collect Log -->
+  <div v-if="collectProgress" class="collect-log">
+    <pre>{{ collectProgress }}</pre>
+  </div>
 
   <!-- Stats -->
   <div class="stats-bar">
@@ -585,36 +599,32 @@ createApp({
     async function triggerCollect() {
       if (collecting.value) return;
       collecting.value = true;
-      collectProgress.value = '启动中...';
+      collectProgress.value = '采集中...\n';
       try {
         await fetch('/api/collect', { method: 'POST' });
-        // 轮询采集状态
+        // 轮询日志
         collectTimer = setInterval(async () => {
           try {
-            const resp = await fetch('/api/collect/status');
+            const resp = await fetch('/api/collect/log');
             const st = await resp.json();
-            if (st.status === 'running') {
-              collectProgress.value = st.progress
-                ? `${st.done}/${st.total} ${st.progress}`
-                : '采集中...';
-            } else if (st.status === 'success') {
-              collectProgress.value = '完成 ✓';
+            if (st.lines && st.lines.length) {
+              collectProgress.value = st.lines.join('\n');
+            }
+            if (st.status === 'success') {
+              collectProgress.value = (st.lines || []).join('\n') + '\n✅ 完成';
               clearInterval(collectTimer);
               collectTimer = null;
               refreshData();
-              setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 2000);
-            } else {
-              collectProgress.value = '未知状态';
+              setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 3000);
+            } else if (st.status === 'idle' || st.status === 'error') {
               clearInterval(collectTimer);
               collectTimer = null;
               collecting.value = false;
+              collectProgress.value = '';
             }
-          } catch(e) {
-            // 轮询失败继续等
-          }
+          } catch(e) {}
         }, 1000);
       } catch (e) {
-        console.error('Collect trigger failed:', e);
         collectProgress.value = '启动失败';
         setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 2000);
       }
