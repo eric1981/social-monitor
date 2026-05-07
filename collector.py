@@ -54,10 +54,10 @@ def get_active_accounts(conn, platform=None, account_name=None):
 
 
 def ensure_video(conn, account_id, platform, account_name, aweme_id, title,
-                 duration=0, url="", create_time=None):
+                 duration=0, url="", create_time=None, cover_url=""):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cur = conn.execute(
-        'SELECT id, title FROM videos WHERE platform=? AND aweme_id=?',
+        'SELECT id, title, cover_url FROM videos WHERE platform=? AND aweme_id=?',
         (platform, aweme_id)
     )
     row = cur.fetchone()
@@ -66,14 +66,16 @@ def ensure_video(conn, account_id, platform, account_name, aweme_id, title,
             conn.execute('UPDATE videos SET title=? WHERE id=?', (title, row['id']))
         if url:
             conn.execute('UPDATE videos SET url=? WHERE id=? AND url=""', (url, row['id']))
+        if cover_url and not row['cover_url']:
+            conn.execute('UPDATE videos SET cover_url=? WHERE id=?', (cover_url, row['id']))
         return row['id'], False
     else:
         conn.execute(
             """INSERT INTO videos
-               (account_id, platform, account_name, aweme_id, title, duration, url, first_seen)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (account_id, platform, account_name, aweme_id, title, duration, url, first_seen, cover_url)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (account_id, platform, account_name, aweme_id, title, duration,
-             url, create_time or now)
+             url, create_time or now, cover_url)
         )
         vid = conn.execute(
             'SELECT id FROM videos WHERE platform=? AND aweme_id=?',
@@ -188,7 +190,7 @@ def collect_douyin(conn, account):
             conn, account_id, 'douyin', account_name,
             aweme_id, title, duration,
             v.get('share_url', '') or f'https://www.douyin.com/video/{aweme_id}',
-            create_time
+            create_time, v.get('cover_url', '')
         )
         if is_new:
             new_count += 1
@@ -292,7 +294,8 @@ def collect_kuaishou(conn, account):
             conn, account_id, 'kuaishou', account_name,
             aweme_id, title, 0,
             f'https://www.kuaishou.com/short-video/{photo_id}' if photo_id else '',
-            str(create_time) if create_time else None
+            str(create_time) if create_time else None,
+            v.get('cover_url', '')
         )
         if is_new:
             new_count += 1
@@ -377,7 +380,8 @@ def collect_xiaohongshu(conn, account):
             conn, account_id, 'xiaohongshu', account_name,
             aweme_id, title, 0,
             f'https://www.xiaohongshu.com/discovery/item/{note_id}',
-            str(create_time) if create_time else None
+            str(create_time) if create_time else None,
+            v.get('cover_url', '')
         )
         if is_new:
             new_count += 1
@@ -471,7 +475,8 @@ def collect_shipinhao(conn, account):
             conn, account_id, 'shipinhao', account_name,
             aweme_id, title, v.get('duration', 0),
             f'https://channels.weixin.qq.com/post/{real_id}',
-            str(create_time) if create_time else None
+            str(create_time) if create_time else None,
+            v.get('cover_url', '')
         )
         if is_new:
             new_count += 1

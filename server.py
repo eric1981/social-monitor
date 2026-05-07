@@ -76,7 +76,7 @@ def query_data():
 
     cur = conn.execute('''
         SELECT v.id, v.platform, v.account_name, v.aweme_id, v.title,
-               v.first_seen, v.url,
+               v.first_seen, v.url, v.cover_url,
                s.collected_at, s.play_count, s.digg_count,
                s.comment_count, s.share_count, s.collect_count
         FROM videos v

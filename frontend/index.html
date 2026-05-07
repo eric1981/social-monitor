@@ -138,6 +138,10 @@ body {
   border: 1px solid var(--hairline-soft);
   overflow: hidden; transition: box-shadow 0.2s;
 }
+.card-link { text-decoration: none; color: inherit; display: block; }
+.card-link:hover .card { box-shadow: rgba(0,0,0,0.08) 0 4px 12px; border-color: var(--hairline); }
+.card-cover { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface-soft); }
+.card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card:hover { box-shadow: var(--shadow-card); }
 
 .card-header {
@@ -335,26 +339,27 @@ body {
 
   <!-- Card Grid -->
   <div v-else class="card-grid">
-    <div v-for="v in filteredVideos" :key="v.aweme_id" class="card">
-      <div class="card-header">
-        <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
-        <span class="account-name">{{ accountLabel(v) }}</span>
-      </div>
-      <div class="card-body">
-        <div class="video-title">{{ v.title || '(无标题)' }}</div>
-        <div class="video-id">{{ v.aweme_id }}</div>
-        <div class="video-link" v-if="v.url">
-          <a :href="v.url" target="_blank" rel="noopener">🔗 查看原文</a>
+    <a v-for="v in filteredVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
+      <div class="card">
+        <div class="card-cover" v-if="v.cover_url">
+          <img :src="v.cover_url" alt="" loading="lazy" @error="e => e.target.parentElement.style.display='none'">
         </div>
-        <div class="card-stats">
-          <div class="stat-item"><div class="num">{{ v.play_count }}</div><div class="label">播放</div></div>
-          <div class="stat-item"><div class="num">{{ v.digg_count }}</div><div class="label">点赞</div></div>
-          <div class="stat-item"><div class="num">{{ v.comment_count }}</div><div class="label">评论</div></div>
-          <div class="stat-item"><div class="num">{{ v.share_count }}</div><div class="label">分享</div></div>
+        <div class="card-header">
+          <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
+          <span class="account-name">{{ accountLabel(v) }}</span>
         </div>
+        <div class="card-body">
+          <div class="video-title">{{ v.title || '(无标题)' }}</div>
+          <div class="card-stats">
+            <div class="stat-item"><div class="num">{{ v.play_count }}</div><div class="label">播放</div></div>
+            <div class="stat-item"><div class="num">{{ v.digg_count }}</div><div class="label">点赞</div></div>
+            <div class="stat-item"><div class="num">{{ v.comment_count }}</div><div class="label">评论</div></div>
+            <div class="stat-item"><div class="num">{{ v.share_count }}</div><div class="label">分享</div></div>
+          </div>
+        </div>
+        <div class="card-time">🕐 {{ publishTime(v) }}</div>
       </div>
-      <div class="card-time">🕐 {{ publishTime(v) }}</div>
-    </div>
+    </a>
   </div>
 
   <!-- Login Modal (inside #app so Vue can control it) -->
