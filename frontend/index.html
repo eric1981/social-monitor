@@ -585,7 +585,7 @@ createApp({
         return;
       }
       loginBusy.value = true;
-      loginStatus.value = '扫码窗口已打开，扫码完成后关掉浏览器即可';
+      loginStatus.value = '正在打开扫码窗口...';
       try {
         const resp = await fetch('/api/login', {
           method: 'POST',
@@ -597,8 +597,8 @@ createApp({
         });
         const result = await resp.json();
         if (result.status === 'ok') {
-          loginStatus.value = '✅ 扫码窗口已打开，请扫码后手动关闭此弹窗';
-          loginBusy.value = false;
+          closeLoginModal();
+          refreshData();
         } else {
           loginStatus.value = result.message || '请求失败';
           loginBusy.value = false;
