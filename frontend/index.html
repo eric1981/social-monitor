@@ -152,7 +152,7 @@ body {
 }
 .card-link { text-decoration: none; color: inherit; display: block; }
 .card-link:hover .card { box-shadow: rgba(0,0,0,0.08) 0 4px 12px; border-color: var(--hairline); }
-.card-cover { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface-soft); }
+.card-cover { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface-soft); display: flex; align-items: center; justify-content: center; }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card:hover { box-shadow: var(--shadow-card); }
 
@@ -371,7 +371,7 @@ body {
     <a v-for="v in filteredVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
       <div class="card">
         <div class="card-cover" v-if="v.cover_url">
-          <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="e => e.target.parentElement.style.display='none'">
+          <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="onCoverError">
         </div>
         <div class="card-header">
           <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
@@ -558,6 +558,21 @@ createApp({
       return '/proxy/image?url=' + encodeURIComponent(url);
     }
 
+    function onCoverError(e) {
+      // 图片加载失败时，显示一个带平台颜色的占位色块
+      const el = e.target;
+      el.style.display = 'none';
+      // 在容器里加一个纯色占位
+      const parent = el.parentElement;
+      if (parent) {
+        parent.style.background = 'var(--surface-strong)';
+        parent.style.display = 'flex';
+        parent.style.alignItems = 'center';
+        parent.style.justifyContent = 'center';
+        parent.innerHTML = '<span style="font-size:32px;opacity:0.3;">📹</span>';
+      }
+    }
+
     const filteredVideos = computed(() => {
       let list = data.value.videos.filter(v => {
         if (tab.value !== 'all' && v.platform !== tab.value) return false;
@@ -706,7 +721,7 @@ createApp({
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
       loading, refreshInterval, collecting, collectProgress,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
-      platformLabel, accountLabel, publishTime, proxyImage,
+      platformLabel, accountLabel, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
