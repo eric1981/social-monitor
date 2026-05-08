@@ -66,7 +66,7 @@ def ensure_video(conn, account_id, platform, account_name, aweme_id, title,
             conn.execute('UPDATE videos SET title=? WHERE id=?', (title, row['id']))
         if url:
             conn.execute('UPDATE videos SET url=? WHERE id=? AND url=""', (url, row['id']))
-        if cover_url and not row['cover_url']:
+        if cover_url:
             conn.execute('UPDATE videos SET cover_url=? WHERE id=?', (cover_url, row['id']))
         return row['id'], False
     else:
