@@ -451,7 +451,9 @@ body {
       <div class="modal-body">
         <div v-if="trendLoading" class="loading"><div class="spinner"></div><div>加载趋势数据...</div></div>
         <div v-else>
-          <canvas id="trendChart" style="width:100%;height:280px;"></canvas>
+          <div style="position:relative;width:100%;height:280px;">
+            <canvas id="trendChart" style="width:100%;height:100%;"></canvas>
+          </div>
           <div style="margin-top:var(--space-base);display:flex;gap:var(--space-sm);flex-wrap:wrap;">
             <span v-for="(p, i) in trendPoints" :key="i" class="trend-point" @click="highlightPoint(i)">
               <span class="tp-time">{{ p.collected_at.slice(5) }}</span>
@@ -717,11 +719,12 @@ createApp({
         const d = await resp.json();
         trendMeta.value = d.meta || {};
         trendPoints.value = d.points || [];
-        await new Promise(r => setTimeout(r, 100));
+        trendLoading.value = false;
+        // 等 Vue 渲染 canvas DOM
+        await new Promise(r => setTimeout(r, 200));
         renderTrendChart();
       } catch (e) {
         console.error('Trend error:', e);
-      } finally {
         trendLoading.value = false;
       }
     }
