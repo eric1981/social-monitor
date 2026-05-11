@@ -163,6 +163,38 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 json_response(self, {'status': 'idle', 'lines': []})
 
+        elif parsed.path == '/api/trend':
+            try:
+                conn = get_db()
+                from urllib.parse import parse_qs
+                qs = parse_qs(parsed.query)
+                video_id = qs.get('video_id', [None])[0]
+                if not video_id:
+                    json_response(self, {'error': '缺少 video_id'}, 400)
+                    return
+                rows = conn.execute('''
+                    SELECT s.collected_at, s.play_count, s.digg_count,
+                           s.comment_count, s.share_count, s.collect_count,
+                           v.title, v.platform, v.account_name
+                    FROM snapshots s
+                    JOIN videos v ON v.id = s.video_id
+                    WHERE s.video_id = ?
+                    ORDER BY s.collected_at
+                ''', (video_id,)).fetchall()
+                conn.close()
+                points = [{
+                    'collected_at': r['collected_at'][:16],
+                    'play': r['play_count'],
+                    'digg': r['digg_count'],
+                    'comment': r['comment_count'],
+                    'share': r['share_count'],
+                    'collect': r['collect_count'],
+                } for r in rows]
+                meta = {'title': rows[0]['title'] if rows else '', 'platform': rows[0]['platform'] if rows else '', 'account': rows[0]['account_name'] if rows else ''}
+                json_response(self, {'meta': meta, 'points': points})
+            except Exception as e:
+                json_response(self, {'error': str(e)}, 500)
+
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
             if not filepath.exists() or not filepath.is_file():

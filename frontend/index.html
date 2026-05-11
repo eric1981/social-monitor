@@ -182,7 +182,13 @@ body {
 .stat-item { text-align: center; }
 .stat-item .num { font-size: 16px; font-weight: 600; color: var(--ink); }
 .stat-item .label { font-size: 11px; color: var(--muted-soft); text-transform: uppercase; letter-spacing: 0.2px; }
-.card-time { font-size: 12px; color: var(--muted-soft); padding: var(--space-sm) var(--space-base) var(--space-base); }
+.card-time { font-size: 12px; color: var(--muted-soft); padding: var(--space-sm) var(--space-base) var(--space-base); display: flex; justify-content: space-between; align-items: center; }
+.trend-btn { font-size: 11px; color: var(--primary); cursor: pointer; padding: 2px 8px; border-radius: var(--rounded-sm); }
+.trend-btn:hover { background: var(--surface-soft); }
+.trend-point { font-size: 11px; padding: 4px 10px; border-radius: var(--rounded-sm); background: var(--surface-soft); cursor: pointer; display: inline-flex; gap: 6px; }
+.trend-point:hover { background: var(--surface-strong); }
+.trend-point .tp-time { color: var(--muted-soft); }
+.trend-point .tp-play { color: var(--ink); font-weight: 600; }
 
 /* ── Loading ─────────────────────────────────────── */
 .loading {
@@ -386,7 +392,7 @@ body {
             <div class="stat-item"><div class="num">{{ v.share_count }}</div><div class="label">分享</div></div>
           </div>
         </div>
-        <div class="card-time">🕐 {{ publishTime(v) }}</div>
+        <div class="card-time">🕐 {{ publishTime(v) }} <span class="trend-btn" @click.prevent.stop="showTrend(v)">📈 趋势</span></div>
       </div>
     </a>
   </div>
@@ -433,9 +439,34 @@ body {
       </div>
     </div>
   </div>
+
+  <!-- Trend Modal -->
+  <div v-if="showTrendModal" class="modal-overlay" @click.self="closeTrendModal">
+    <div class="modal" style="width:680px;">
+      <div class="modal-header">
+        <h2>📈 播放量趋势</h2>
+        <div style="font-size:13px;color:var(--muted);flex:1;margin-left:var(--space-base);">{{ trendMeta.title || '' }}</div>
+        <button class="modal-close" @click="closeTrendModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div v-if="trendLoading" class="loading"><div class="spinner"></div><div>加载趋势数据...</div></div>
+        <div v-else>
+          <canvas id="trendChart" style="width:100%;height:280px;"></canvas>
+          <div style="margin-top:var(--space-base);display:flex;gap:var(--space-sm);flex-wrap:wrap;">
+            <span v-for="(p, i) in trendPoints" :key="i" class="trend-point" @click="highlightPoint(i)">
+              <span class="tp-time">{{ p.collected_at.slice(5) }}</span>
+              <span class="tp-play">{{ p.play.toLocaleString() }}</span>
+            </span>
+            <span v-if="!trendPoints.length" style="color:var(--muted-soft);font-size:13px;">暂无趋势数据</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
@@ -667,6 +698,72 @@ createApp({
       if (a) loginPlatform.value = a.platform;
     }
 
+    const showTrendModal = ref(false);
+    const trendLoading = ref(false);
+    const trendMeta = ref({});
+    const trendPoints = ref([]);
+    let trendChart = null;
+
+    function closeTrendModal() {
+      showTrendModal.value = false;
+      if (trendChart) { trendChart.destroy(); trendChart = null; }
+    }
+
+    async function showTrend(v) {
+      showTrendModal.value = true;
+      trendLoading.value = true;
+      try {
+        const resp = await fetch('/api/trend?video_id=' + v.id);
+        const d = await resp.json();
+        trendMeta.value = d.meta || {};
+        trendPoints.value = d.points || [];
+        await new Promise(r => setTimeout(r, 100));
+        renderTrendChart();
+      } catch (e) {
+        console.error('Trend error:', e);
+      } finally {
+        trendLoading.value = false;
+      }
+    }
+
+    function renderTrendChart() {
+      const pts = trendPoints.value;
+      if (!pts.length) return;
+      const canvas = document.getElementById('trendChart');
+      if (!canvas) return;
+      if (trendChart) { trendChart.destroy(); }
+
+      const labels = pts.map(p => p.collected_at.slice(5));
+      const plays = pts.map(p => p.play);
+      const digs = pts.map(p => p.digg);
+
+      trendChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: '播放', data: plays, borderColor: '#ff385c', backgroundColor: 'rgba(255,56,92,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+            { label: '点赞', data: digs, borderColor: '#428bff', backgroundColor: 'rgba(66,139,255,0.08)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4, 4] },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function highlightPoint(i) {
+      if (trendChart) {
+        trendChart.setActiveElements([{datasetIndex: 0, index: i}]);
+        trendChart.update();
+      }
+    }
+
     function closeLoginModal() {
       showLoginModal.value = false;
     }
@@ -725,6 +822,8 @@ createApp({
       refreshData, setTab, setAutoRefresh, triggerCollect,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
+      showTrendModal, trendLoading, trendMeta, trendPoints,
+      showTrend, closeTrendModal, highlightPoint,
     };
   }
 }).mount('#app');
