@@ -78,13 +78,13 @@ body {
 .top-nav .nav-right a:hover { color: var(--ink); }
 
 /* ── Collect Log ──────────────────────────────── */
-.collect-log {
-  background: #1a1a2e; color: #00ff88;
-  border-radius: var(--rounded-md); padding: var(--space-base);
-  margin-bottom: var(--space-lg); max-height: 200px; overflow-y: auto;
-  font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5;
-}
+.collect-log { background: #1a1a2e; color: #00ff88; border-radius: var(--rounded-md); padding: var(--space-base); margin-bottom: var(--space-lg); max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; }
 .collect-log pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+.collect-log .cl-row { padding: 3px 0; display: flex; gap: 8px; align-items: center; }
+.collect-log .cl-badge { width: 20px; text-align: center; }
+.collect-log .cl-platform { color: #66ccff; min-width: 70px; }
+.collect-log .cl-nickname { color: #ffcc66; min-width: 80px; }
+.collect-log .cl-msg { color: #ff6666; font-size: 11px; }
 
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
@@ -304,7 +304,13 @@ body {
 
   <!-- Collect Log -->
   <div v-if="collectProgress" class="collect-log">
-    <pre>{{ collectProgress }}</pre>
+    <div v-for="r in collectResults" :key="r.account" class="cl-row">
+      <span class="cl-badge" :class="r.status">{{ r.status === 'ok' ? '✅' : '❌' }}</span>
+      <span class="cl-platform">{{ r.platform }}</span>
+      <span class="cl-nickname">{{ r.nickname }}</span>
+      <span v-if="r.status === 'error'" class="cl-msg">{{ r.message }}</span>
+    </div>
+    <div v-if="collectResults.length === 0" class="cl-row"><pre>{{ collectProgress }}</pre></div>
   </div>
 
   <!-- Stats -->
@@ -491,6 +497,7 @@ createApp({
     const loginStatus = ref('');
     const collecting = ref(false);
     const collectProgress = ref('');
+    const collectResults = ref([]);
     let collectTimer = null;
     let timer = null;
 
@@ -654,27 +661,31 @@ createApp({
       if (collecting.value) return;
       collecting.value = true;
       collectProgress.value = '采集中...\n';
+      collectResults.value = [];
       try {
         await fetch('/api/collect', { method: 'POST' });
-        // 轮询日志
         collectTimer = setInterval(async () => {
           try {
             const resp = await fetch('/api/collect/log');
             const st = await resp.json();
-            if (st.lines && st.lines.length) {
+            if (st.results && st.results.length) {
+              collectResults.value = st.results;
+            }
+            if (st.lines && st.lines.length && !st.results) {
               collectProgress.value = st.lines.join('\n');
             }
             if (st.status === 'success') {
-              collectProgress.value = (st.lines || []).join('\n') + '\n✅ 完成';
+              collectProgress.value = '✅ 采集完成';
               clearInterval(collectTimer);
               collectTimer = null;
               refreshData();
-              setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 3000);
+              setTimeout(() => { collecting.value = false; collectProgress.value = ''; collectResults.value = []; }, 5000);
             } else if (st.status === 'idle' || st.status === 'error') {
               clearInterval(collectTimer);
               collectTimer = null;
               collecting.value = false;
               collectProgress.value = '';
+              collectResults.value = [];
             }
           } catch(e) {}
         }, 1000);
@@ -819,7 +830,7 @@ createApp({
 
     return {
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
-      loading, refreshInterval, collecting, collectProgress,
+      loading, refreshInterval, collecting, collectProgress, collectResults,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       platformLabel, accountLabel, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect,

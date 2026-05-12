@@ -100,9 +100,11 @@ def query_data():
         today_play = v['play_count']
         yesterday_play = yesterday_plays.get(v['id'], None)
         day_before_play = day_before_plays.get(v['id'], None)
-        # 只有昨天和前天都有数据时才计算增量，否则为 0（避免某天没采集到导致负数）
         if yesterday_play is not None and day_before_play is not None:
             v['yesterday_views'] = yesterday_play - day_before_play
+        elif yesterday_play is not None:
+            # 昨天有数据但前天没有（新视频），昨日播放 = 昨天首次采集到的播放量
+            v['yesterday_views'] = yesterday_play
         else:
             v['yesterday_views'] = 0
         v['nickname'] = nickname_map.get(v['account_name'], v['account_name'])

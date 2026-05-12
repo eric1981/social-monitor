@@ -155,7 +155,7 @@ def collect_douyin(conn, account):
 
     if not videos:
         print(f"  [抖音] {account_name} — 无视频数据", flush=True)
-        return
+        raise Exception("无视频数据，可能cookie失效")
 
     # 自动更新昵称
     if nickname and nickname != account['nickname']:
@@ -259,7 +259,7 @@ def collect_kuaishou(conn, account):
 
     if not videos:
         print(f"  [快手] {account_name} — 无视频数据", flush=True)
-        return
+        raise Exception("无视频数据，可能cookie失效")
 
     # 自动更新昵称
     if nickname and nickname != account['nickname']:
@@ -354,7 +354,7 @@ def collect_xiaohongshu(conn, account):
 
     if not videos:
         print(f"  [小红书] {account_name} — 无视频数据", flush=True)
-        return
+        raise Exception("无视频数据，可能cookie失效")
 
     if nickname and nickname != account['nickname']:
         conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
@@ -449,7 +449,7 @@ def collect_shipinhao(conn, account):
 
     if not videos:
         print(f"  [视频号] {account_name} — 无视频数据", flush=True)
-        return
+        raise Exception("无视频数据，可能cookie失效")
 
     if nickname:
         nick_clean = nickname.replace('\n', '').strip()
@@ -498,6 +498,8 @@ def collect_shipinhao(conn, account):
 
 
 # ── 主入口 ──────────────────────────────────────────────
+_COLLECT_RESULTS = []  # 全局收集每个账号的执行结果
+
 def collect_platform(conn, platform: str, accounts):
     print(f"\n{'='*50}")
     print(f"平台: {platform} | 账号数: {len(accounts)}")
@@ -516,13 +518,17 @@ def collect_platform(conn, platform: str, accounts):
         return
 
     for acct in accounts:
+        nick = acct['nickname'] or acct['account_name']
         try:
             collector(conn, acct)
+            _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'ok'})
         except Exception as e:
+            err_msg = str(e)[:100]
+            _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'error', 'message': err_msg})
             print(f"  [错误] {platform}/{acct['account_name']}: {e}", flush=True)
 
 
-def write_status(status, progress='', done=0, total=0):
+def write_status(status, progress='', done=0, total=0, results=None):
     """写入采集状态文件，供前端轮询"""
     import json
     status_path = MONITOR_DIR / 'collect_status.json'
@@ -530,13 +536,15 @@ def write_status(status, progress='', done=0, total=0):
         with open(status_path, 'r') as f:
             existing = json.load(f)
     except:
-        existing = {'status': 'running', 'lines': []}
+        existing = {'status': 'running', 'lines': [], 'results': []}
     existing['status'] = status
     existing['progress'] = progress
     existing['done'] = done
     existing['total'] = total
     if progress and progress not in existing.get('lines', []):
         existing.setdefault('lines', []).append(progress)
+    if results:
+        existing['results'] = results
     try:
         with open(status_path, 'w') as f:
             json.dump(existing, f, ensure_ascii=False)
@@ -583,6 +591,17 @@ def main():
 
     conn.close()
     write_status('success', '全部完成', total, total)
+    # 写入详细结果
+    try:
+        import json
+        status_path = MONITOR_DIR / 'collect_status.json'
+        with open(status_path, 'r') as f:
+            existing = json.load(f)
+        existing['results'] = _COLLECT_RESULTS
+        with open(status_path, 'w') as f:
+            json.dump(existing, f, ensure_ascii=False)
+    except:
+        pass
     print(f"\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
