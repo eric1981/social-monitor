@@ -50,31 +50,28 @@ def query_data():
         return ''
 
     videos = []
-    # 计算昨日和前天的日期边界，取当天最后一次采集时间
+    # 计算昨日和前天的日期边界
     now = datetime.now()
     yesterday_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
     yesterday_end = now.replace(hour=0, minute=0, second=0, microsecond=0)
     day_before_start = yesterday_start - timedelta(days=1)
 
-    def get_day_latest(conn, start, end):
-        row = conn.execute(
-            'SELECT MAX(collected_at) as t FROM snapshots WHERE collected_at >= ? AND collected_at < ?',
-            (start.strftime('%Y-%m-%d %H:%M:%S'), end.strftime('%Y-%m-%d %H:%M:%S'))
-        ).fetchone()
-        return row['t'] if row and row['t'] else None
+    # 预加载所有视频在昨天和前天的快照（按 video_id 分别取最后一条）
+    def day_snapshot_map(conn, day_start, day_end):
+        rows = conn.execute('''
+            SELECT s.video_id, s.play_count
+            FROM snapshots s
+            INNER JOIN (
+                SELECT video_id, MAX(collected_at) as max_ts
+                FROM snapshots
+                WHERE collected_at >= ? AND collected_at < ?
+                GROUP BY video_id
+            ) latest ON s.video_id = latest.video_id AND s.collected_at = latest.max_ts
+        ''', (day_start, day_end)).fetchall()
+        return {r['video_id']: r['play_count'] for r in rows}
 
-    yesterday_ts = get_day_latest(conn, yesterday_start, yesterday_end)
-    day_before_ts = get_day_latest(conn, day_before_start, yesterday_start)
-
-    # 预加载昨日和前天的快照数据：{video_id: play_count}
-    yesterday_plays = {}
-    day_before_plays = {}
-    if yesterday_ts:
-        for r in conn.execute('SELECT video_id, play_count FROM snapshots WHERE collected_at=?', (yesterday_ts,)):
-            yesterday_plays[r['video_id']] = r['play_count']
-    if day_before_ts:
-        for r in conn.execute('SELECT video_id, play_count FROM snapshots WHERE collected_at=?', (day_before_ts,)):
-            day_before_plays[r['video_id']] = r['play_count']
+    yesterday_plays = day_snapshot_map(conn, yesterday_start.strftime('%Y-%m-%d %H:%M:%S'), yesterday_end.strftime('%Y-%m-%d %H:%M:%S'))
+    day_before_plays = day_snapshot_map(conn, day_before_start.strftime('%Y-%m-%d %H:%M:%S'), yesterday_start.strftime('%Y-%m-%d %H:%M:%S'))
 
     cur = conn.execute('''
         SELECT v.id, v.platform, v.account_name, v.aweme_id, v.title,
