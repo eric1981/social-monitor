@@ -283,6 +283,41 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 json_response(self, {'status': 'idle', 'lines': []})
 
+        elif parsed.path.startswith('/api/relogin/'):
+            # POST /api/relogin/douyin/benxian-app — 扫码重新登录
+            parts = parsed.path.split('/')
+            if len(parts) >= 5:
+                platform = parts[3]
+                account_name = parts[4]
+                try:
+                    # 同步 cookie 到 Windows 桌面，让 win_relogin.py 用
+                    import shutil
+                    src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
+                    win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                    win_cookies.mkdir(parents=True, exist_ok=True)
+                    if src.exists():
+                        shutil.copy2(str(src), str(win_cookies / f'{platform}_{account_name}.json'))
+
+                    # 通过 cmd.exe 调 Windows 侧的扫码脚本（win_relogin.py 会同步 cookie 回来）
+                    win_relogin = r'C:\Users\NINGMEI\Desktop\social-monitor\win_relogin.py'
+                    result = subprocess.run(
+                        ['cmd.exe', '/c', 'start', '/wait', 'python', win_relogin, platform, account_name],
+                        capture_output=True, text=False, timeout=300
+                    )
+                    stdout = result.stdout.decode('gbk', errors='replace') if result.stdout else ''
+                    stderr = result.stderr.decode('gbk', errors='replace') if result.stderr else ''
+
+                    if result.returncode == 0:
+                        json_response(self, {'status': 'ok', 'message': '扫码登录成功'})
+                    else:
+                        json_response(self, {'status': 'error', 'message': f'登录失败: {stderr or stdout}'}, 500)
+                except subprocess.TimeoutExpired:
+                    json_response(self, {'status': 'timeout', 'message': '扫码超时'}, 500)
+                except Exception as e:
+                    json_response(self, {'status': 'error', 'message': str(e)}, 500)
+            else:
+                json_response(self, {'status': 'error', 'message': '参数不足: /api/relogin/{platform}/{account}'}, 400)
+
         else:
             json_response(self, {'error': 'not found'}, 404)
 
@@ -302,6 +337,7 @@ if __name__ == '__main__':
     print(f"   前端页面: http://localhost:{PORT}")
     print(f"   API接口:  http://localhost:{PORT}/api/data")
     print(f"   新增账号: POST http://localhost:{PORT}/api/login")
+    print(f"   扫码登录: POST http://localhost:{PORT}/api/relogin/{platform}/{account_name}")
     print()
 
     server = HTTPServer(('0.0.0.0', PORT), Handler)
