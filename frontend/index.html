@@ -85,6 +85,10 @@ body {
 .collect-log .cl-platform { color: #66ccff; min-width: 70px; }
 .collect-log .cl-nickname { color: #ffcc66; min-width: 80px; }
 .collect-log .cl-msg { color: #ff6666; font-size: 11px; }
+.collect-log .cl-info { color: #69db7c; font-size: 11px; }
+.collect-log .cl-relogin { color: #66ccff; cursor: pointer; text-decoration: underline; font-size: 11px; font-weight: bold; }
+.collect-log .cl-relogin:hover { color: #99ddff; }
+.collect-log .cl-relogin-progress { color: #ffd43b; font-size: 12px; padding: 4px 0; }
 
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
@@ -303,14 +307,17 @@ body {
   </nav>
 
   <!-- Collect Log -->
-  <div v-if="collectProgress" class="collect-log">
+  <div v-if="collectProgress || relogining" class="collect-log">
     <div v-for="r in collectResults" :key="r.account" class="cl-row">
       <span class="cl-badge" :class="r.status">{{ r.status === 'ok' ? '✅' : '❌' }}</span>
       <span class="cl-platform">{{ r.platform }}</span>
       <span class="cl-nickname">{{ r.nickname }}</span>
+      <span v-if="r.status === 'ok'" class="cl-info">{{ r.message }}</span>
       <span v-if="r.status === 'error'" class="cl-msg">{{ r.message }}</span>
+      <span v-if="r.status === 'error' && r.platform === 'douyin'" class="cl-relogin" @click="relogin(r.platform, r.account)" v-show="!relogining">🔄 扫码</span>
     </div>
     <div v-if="collectResults.length === 0" class="cl-row"><pre>{{ collectProgress }}</pre></div>
+    <div v-if="relogining" class="cl-row cl-relogin-progress">{{ reloginMsg }}</div>
   </div>
 
   <!-- Stats -->
@@ -498,6 +505,8 @@ createApp({
     const collecting = ref(false);
     const collectProgress = ref('');
     const collectResults = ref([]);
+    const relogining = ref(false);
+    const reloginMsg = ref('');
     let collectTimer = null;
     let timer = null;
 
@@ -695,6 +704,33 @@ createApp({
       }
     }
 
+    async function relogin(platform, account) {
+      relogining.value = true;
+      reloginMsg.value = '正在打开浏览器扫码登录...';
+      try {
+        await fetch('/api/relogin/' + platform + '/' + account, { method: 'POST' });
+        const ci = setInterval(async () => {
+          try {
+            const resp = await fetch('/api/relogin/status');
+            const st = await resp.json();
+            if (st.status === 'success') {
+              reloginMsg.value = '✅ 扫码登录成功！';
+              clearInterval(ci);
+              setTimeout(() => { relogining.value = false; reloginMsg.value = ''; }, 3000);
+              triggerCollect();
+            } else if (st.status === 'running') {
+              reloginMsg.value = st.message || '等待扫码...';
+            } else {
+              reloginMsg.value = '状态: ' + (st.message || '');
+            }
+          } catch(e) {}
+        }, 1500);
+      } catch (e) {
+        reloginMsg.value = '启动失败';
+        setTimeout(() => { relogining.value = false; reloginMsg.value = ''; }, 3000);
+      }
+    }
+
     function openLoginModal() {
       showLoginModal.value = true;
       loginPlatform.value = 'douyin';
@@ -830,10 +866,10 @@ createApp({
 
     return {
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
-      loading, refreshInterval, collecting, collectProgress, collectResults,
+      loading, refreshInterval, collecting, collectProgress, collectResults, relogining, reloginMsg,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       platformLabel, accountLabel, publishTime, proxyImage, onCoverError,
-      refreshData, setTab, setAutoRefresh, triggerCollect,
+      refreshData, setTab, setAutoRefresh, triggerCollect, relogin,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
       showTrendModal, trendLoading, trendMeta, trendPoints,

@@ -283,40 +283,64 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 json_response(self, {'status': 'idle', 'lines': []})
 
-        elif parsed.path.startswith('/api/relogin/'):
-            # POST /api/relogin/douyin/benxian-app — 扫码重新登录
-            parts = parsed.path.split('/')
-            if len(parts) >= 5:
-                platform = parts[3]
-                account_name = parts[4]
-                try:
-                    # 同步 cookie 到 Windows 桌面，让 win_relogin.py 用
-                    import shutil
-                    src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
-                    win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
-                    win_cookies.mkdir(parents=True, exist_ok=True)
-                    if src.exists():
-                        shutil.copy2(str(src), str(win_cookies / f'{platform}_{account_name}.json'))
-
-                    # 通过 cmd.exe 调 Windows 侧的扫码脚本（win_relogin.py 会同步 cookie 回来）
-                    win_relogin = r'C:\Users\NINGMEI\Desktop\social-monitor\win_relogin.py'
-                    result = subprocess.run(
-                        ['cmd.exe', '/c', 'start', '/wait', 'python', win_relogin, platform, account_name],
-                        capture_output=True, text=False, timeout=300
-                    )
-                    stdout = result.stdout.decode('gbk', errors='replace') if result.stdout else ''
-                    stderr = result.stderr.decode('gbk', errors='replace') if result.stderr else ''
-
-                    if result.returncode == 0:
-                        json_response(self, {'status': 'ok', 'message': '扫码登录成功'})
-                    else:
-                        json_response(self, {'status': 'error', 'message': f'登录失败: {stderr or stdout}'}, 500)
-                except subprocess.TimeoutExpired:
-                    json_response(self, {'status': 'timeout', 'message': '扫码超时'}, 500)
-                except Exception as e:
-                    json_response(self, {'status': 'error', 'message': str(e)}, 500)
+        elif parsed.path.startswith('/api/relogin'):
+            if parsed.path == '/api/relogin/status':
+                """查询扫码登录状态（GET）"""
+                status_path = MONITOR_DIR / 'relogin_status.json'
+                if status_path.exists():
+                    try:
+                        with open(status_path) as f:
+                            st = json.load(f)
+                        account_name = st.get('account_name', '')
+                        platform = st.get('platform', '')
+                        done_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies") / f'.{platform}_{account_name}_done'
+                        if done_file.exists():
+                            win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                            src_file = win_cookies / f'{platform}_{account_name}.json'
+                            dst = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
+                            if src_file.exists():
+                                import shutil
+                                shutil.copy2(str(src_file), str(dst))
+                            done_file.unlink(missing_ok=True)
+                            st['status'] = 'success'
+                            st['message'] = '扫码登录成功'
+                            with open(status_path, 'w') as f:
+                                json.dump(st, f, ensure_ascii=False)
+                        json_response(self, st)
+                    except:
+                        json_response(self, {'status': 'idle', 'message': '无扫码登录任务'})
+                else:
+                    json_response(self, {'status': 'idle', 'message': '无扫码登录任务'})
             else:
-                json_response(self, {'status': 'error', 'message': '参数不足: /api/relogin/{platform}/{account}'}, 400)
+                """POST /api/relogin/douyin/benxian-app — 后台启动扫码"""
+                parts = parsed.path.split('/')
+                if len(parts) >= 5:
+                    platform = parts[3]
+                    account_name = parts[4]
+                    try:
+                        import shutil
+                        src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
+                        win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                        win_cookies.mkdir(parents=True, exist_ok=True)
+                        if src.exists():
+                            shutil.copy2(str(src), str(win_cookies / f'{platform}_{account_name}.json'))
+
+                        log_path = MONITOR_DIR / 'relogin_status.json'
+                        with open(log_path, 'w') as f:
+                            json.dump({'status': 'running', 'platform': platform, 'account_name': account_name,
+                                       'message': f'正在打开浏览器扫码登录 {platform}/{account_name}...'}, f)
+
+                        win_relogin = r'C:\Users\NINGMEI\Desktop\social-monitor\win_relogin.py'
+                        subprocess.Popen(
+                            ['cmd.exe', '/c', 'start', '/wait', 'python', win_relogin, platform, account_name,
+                             '&&', 'echo', 'DONE', '>', str(win_cookies / f'.{platform}_{account_name}_done')],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                        )
+                        json_response(self, {'status': 'ok', 'message': '扫码登录已启动，请查看浏览器窗口'})
+                    except Exception as e:
+                        json_response(self, {'status': 'error', 'message': str(e)}, 500)
+                else:
+                    json_response(self, {'status': 'error', 'message': '参数不足: /api/relogin/{platform}/{account}'}, 400)
 
         else:
             json_response(self, {'error': 'not found'}, 404)
