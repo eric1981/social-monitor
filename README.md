@@ -1,123 +1,87 @@
 # Social Monitor
 
-社交媒体账号监控系统。基于 social-auto-upload 的 cookie 机制采集各平台创作者后台数据。
-
-## 支持的平台
-
-| 平台 | 采集方式 | 自动化 |
-|------|---------|--------|
-| 🎵 抖音 | Playwright + cookie → 创作者后台 API | ✅ 全自动 |
-| 🎬 快手 | Playwright + cookie → DOM 提取 | ✅ 全自动 |
-| 📕 小红书 | Playwright + cookie → DOM 提取 | ✅ 全自动 |
-| 📺 视频号 | Playwright + cookie → post_list API | ✅ 全自动 |
-
-每个平台的采集器都在 Windows 侧独立运行（Playwright + storage_state cookie 文件），不需要手动切换 Chrome 账号。
+4 平台 × 12 账号社交媒体监控系统。采集抖音、快手、小红书、视频号的作品数据，生成时间序列快照，前端 Airbnb 风格看板展示。
 
 ## 项目结构
 
 ```
 social-monitor/
-├── collector.py              ← 主采集脚本（WSL 侧调度）
-├── server.py                 ← 轻量 API 服务（前端 + 后端，:5408）
-├── schema.sql                ← 数据库建表 SQL
-├── monitor.db                ← SQLite 数据库（WAL 模式）
-├── collect_status.json       ← 采集进度状态（前端轮询）
+├── collector.py           # 采集入口（WSL）
+├── server.py              # API + 静态文件服务 :5408
+├── schema.sql             # 数据库建表语句
+├── monitor.db             # SQLite 数据库（WAL 模式）
+├── requirements.txt       # Python 依赖
 ├── frontend/
-│   └── index.html            ← 前端页面（Airbnb 风格，Vue 3 CDN）
-├── social-auto-upload/       ← 上游项目依赖（完整复制，独立管理）
-│   ├── uploader/             ← 各平台上传达器（含 cookie_auth 等函数）
-│   ├── cookies/              ← cookie 文件（gitignored）
-│   └── utils/                ← 工具（base_social_media, login_qrcode 等）
-├── cookies/                  ← cookie 文件副本（gitignored，待清理）
-└── .venv/                    ← Python 虚拟环境（gitignored）
+│   └── index.html         # Vue 3 单页前端（Airbnb 风格）
+└── social-auto-upload/
+    └── cookies/           # 各平台 cookie 文件
 ```
 
-### Windows 侧（C:\Users\NINGMEI\Desktop\social-monitor\）
-
+Windows 侧（`C:\Users\NINGMEI\Desktop\social-monitor\`）：
 ```
-social-monitor/
-├── win_collector.py          ← 抖音采集器（Playwright + API fetch + 游标翻页）
-├── win_kuaishou.py           ← 快手采集器（Playwright + DOM，支持流量助推行）
-├── win_xiaohongshu.py        ← 小红书采集器（Playwright + DOM + text fallback）
-├── win_shipinhao.py          ← 视频号采集器（Playwright + post_list API + 翻页）
-├── login_tencent_win.py      ← 视频号扫码登录脚本
-├── social-auto-upload/
-│   └── cookies/              ← cookie 文件
-│       ├── douyin_*.json     ← 抖音 cookie
-│       ├── kuaishou_*.json   ← 快手 cookie
-│       ├── xiaohongshu_*.json← 小红书 cookie
-│       └── tencent_uploader/ ← 视频号 cookie（sph1, sph2, sph3）
-└── tmp/                      ← 采集中间结果 JSON
+win_collector.py            # 抖音采集（Playwright API 直调）
+win_kuaishou.py             # 快手采集（Playwright DOM 提取）
+win_xiaohongshu.py          # 小红书采集（Playwright DOM 提取）
+win_shipinhao.py            # 视频号采集（Playwright API 直调）
+win_login.py                # 通用扫码登录
+win_relogin.py              # cookie 失效重扫
 ```
 
-## 使用方式
+## 启动（WSL / Linux）
 
 ```bash
-# 采集所有活跃账号
-python3 collector.py
-
-# 采集特定平台
-python3 collector.py --platform douyin
-
-# 采集特定账号
-python3 collector.py --account benxian1
-
-# 启动前端服务
-python3 server.py
-# → 浏览器打开 http://localhost:5408
+cd ~/social-monitor
+pip install -r requirements.txt
+python server.py
 ```
 
-### 前端功能
+打开 http://localhost:5408 查看前端看板。
 
-- **抓取** — 一键全平台采集，深色日志面板实时显示进度
-- **刷新** — 手动刷新数据
-- **新增账号 / 重新扫码** — 支持选已有账号重新扫码登录
-- **日期筛选** — 按发布时间范围过滤
-- **排序** — 播放量/点赞数/评论数/发布时间
-- **账号筛选** — 按账号过滤
-- **封面图** — 卡片显示视频封面，整张卡片可点击跳转原文
-- **自动刷新** — 30秒/1分/5分自动刷新
-- **昨日播放** — 统计昨日新增播放量，与筛选条件联动
+## 采集
 
-## 采集架构
+```bash
+# 全量采集所有活跃账号
+python collector.py
 
+# 指定平台
+python collector.py --platform douyin
+
+# 指定账号
+python collector.py --account benxian1
+
+# 预览（不写入数据库）
+python collector.py --dry-run
 ```
-前端点"抓取" / 命令行执行 collector.py
-  │
-  ├─ 抖音：cmd.exe → win_collector.py (Playwright + cookie → creator API)
-  │    └─ 翻页：游标模式（max_cursor），非 page_num
-  │
-  ├─ 快手：cmd.exe → win_kuaishou.py (Playwright + cookie → DOM 提取)
-  │    └─ 注意：获"流量助推"的视频多一行 DOM，采集用倒序查找 stats row
-  │
-  ├─ 小红书：cmd.exe → win_xiaohongshu.py (Playwright + cookie → DOM 提取)
-  │    └─ API 有签名保护(406)，不能用 fetch，只能用 DOM
-  │
-  └─ 视频号：cmd.exe → win_shipinhao.py (Playwright + cookie → post_list API)
-       └─ wujie 微前端沙箱，API 路径 /micro/content/cgi-bin/mmfinderassistant-bin/post/post_list
-```
+
+## 跨平台支持
+
+### Linux (WSL/Ubuntu)
+- ✅ 前端 + API 服务完全支持（`server.py`）
+- ⚠️ 采集依赖 Windows 侧 Playwright 脚本
+- WSL 内 Playwright 因 EPIPE 崩溃，必须走 `cmd.exe → Windows Playwright` 模式
+
+### macOS
+- ❌ **不支持**。核心采集流程硬编码了：
+  - `cmd.exe` 调用 Windows 脚本
+  - Windows 文件路径（`C:\Users\NINGMEI\...`）
+  - Windows 侧 Playwright 依赖
+- 前端 + API 服务理论上可在 macOS 运行，但采集功能完全不可用
+
+### 纯 Linux（非 WSL）
+- ❌ **不支持**。同上，采集架构依赖 Windows 环境
+
+> 如果要让 social-monitor 跨平台，需要重构 `collector.py`：去掉 `cmd.exe` 调用，改为直接运行 Playwright（Windows 侧脚本需移植为跨平台 Python 脚本），并移除硬编码的 Windows 路径。
 
 ## 数据库
 
-- `accounts`: 平台 × 账号（is_active 控制是否采集，UNIQUE(platform, account_name)）
-- `videos`: 视频静态信息（aweme_id 去重，含 cover_url 封面图）
-- `snapshots`: 时间序列数据（每次采集追加，UNIQUE(video_id, collected_at) 按分钟去重）
+```sql
+accounts  — UNIQUE(platform, account_name)  昵称、是否活跃
+videos    — UNIQUE(platform, aweme_id)       标题、封面、首次发现时间
+snapshots — UNIQUE(video_id, collected_at)   播放/点赞/评论/分享/收藏 时间序列
+```
 
-关键设计：
-- **每次采集都更新 cover_url** — 刷新 CDN 签名，解决旧封面 403
-- **昵称变化时更新** — 采集到不同昵称自动同步，而非仅在首次填写
-- **昨日播放量** — 昨天最后一次快照 - 前天最后一次快照
+## 已知问题
 
-## 常见陷阱
-
-1. **快手 DOM 行数不稳定** — "流量助推"视频多一行，用倒序查找 stats row，不要用固定 index
-2. **视频号 cookie 过期频繁** — 几天到一周就会过期，需重新扫码。页面跳转到 login.html 时 API 返回空数据
-3. **视频号 cookie 只在 Windows 侧** — tencent_uploader 目录在 WSL 侧始终为空，不要依赖 WSL→Windows 的 cookie 同步
-4. **WSL Playwright EPIPE** — WSL 下 Playwright 约 3 分钟 crash，所有采集用 Windows 原生 Playwright
-5. **GBK 编码崩溃** — Windows Python 3.14 的 print 遇到中文字符可能崩溃。所有采集脚本先把 JSON 写入文件，再做调试输出
-6. **CDN 签名过期** — 快手封面 URL 带时间戳签名，旧数据会 403。每次采集更新 cover_url 解决
-7. **小红书 API 406** — 有 X-s 签名保护，不要死磕，用 DOM 提取
-
-## 移植到纯 Linux/macOS
-
-把所有采集脚本从 Windows 移到本机 Playwright 即可。具体参考 skill `social-monitor-collection` 的移植说明。
+- **视频号定时发布重复**：定时发布和已发布有不同 `objectId`，已在 `win_shipinhao.py` 中通过比较 `createTime` 与当前时间过滤
+- **小红书日期格式**：小红书前端显示"定时发布 2026年05月17日 17:24"，`server.py` 会自动标准化为 `2026-05-17 17:24:00` 以保证跨平台排序正确
+- **视频号标题**：视频号 API 把"描述"存在 `desc.description`（非 `desc.text`），已在 `win_shipinhao.py` 中修正

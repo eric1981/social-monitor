@@ -90,7 +90,9 @@ def query_data():
         raw = v.get('first_seen', '') or ''
         if '年' in raw:
             try:
-                parts = raw.replace('年', '-').replace('月', '-').replace('日', '').split(' ')
+                # 先去掉 "定时发布 "、"发布于 " 等前缀
+                clean = raw.replace('定时发布 ', '').replace('发布于 ', '')
+                parts = clean.replace('年', '-').replace('月', '-').replace('日', '').split(' ')
                 dparts = parts[0].split('-')
                 if len(dparts) == 3:
                     v['first_seen'] = f"{dparts[0].strip()}-{dparts[1].strip().zfill(2)}-{dparts[2].strip().zfill(2)} {parts[1].strip() if len(parts) > 1 else '00:00'}:00"
@@ -361,7 +363,6 @@ if __name__ == '__main__':
     print(f"   前端页面: http://localhost:{PORT}")
     print(f"   API接口:  http://localhost:{PORT}/api/data")
     print(f"   新增账号: POST http://localhost:{PORT}/api/login")
-    print(f"   扫码登录: POST http://localhost:{PORT}/api/relogin/{platform}/{account_name}")
     print()
 
     server = HTTPServer(('0.0.0.0', PORT), Handler)
