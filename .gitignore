@@ -39,3 +39,4 @@ cookies/
 tmp/
 logs/
 *:Zone.Identifier
+collect_status.json
