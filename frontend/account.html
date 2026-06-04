@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>账号详情 — Social Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #ff385c;
+  --primary-active: #e00b41;
+  --ink: #222222;
+  --body: #3f3f3f;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --hairline: #dddddd;
+  --hairline-soft: #ebebeb;
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
+  --on-primary: #ffffff;
+  --legal-link: #428bff;
+  --rounded-sm: 8px;
+  --rounded-md: 14px;
+  --rounded-lg: 20px;
+  --rounded-full: 9999px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --font: 'Inter', -apple-system, system-ui, sans-serif;
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.43;
+}
+.app { max-width: 1280px; margin: 0 auto; padding: var(--space-lg); }
+
+/* Top Nav */
+.top-nav {
+  display: flex; align-items: center; height: 64px;
+  border-bottom: 1px solid var(--hairline-soft);
+  margin-bottom: var(--space-xl); gap: var(--space-lg);
+}
+.top-nav .logo {
+  font-size: 20px; font-weight: 600; color: var(--primary);
+  letter-spacing: -0.3px;
+}
+.top-nav .logo a { text-decoration: none; color: inherit; }
+.top-nav .logo span { color: var(--ink); }
+.top-nav .back-link {
+  font-size: 14px; color: var(--legal-link); text-decoration: none;
+  margin-left: auto;
+}
+.top-nav .back-link:hover { text-decoration: underline; }
+
+/* Profile Header */
+.profile-header {
+  display: flex; align-items: center; gap: var(--space-lg);
+  padding: var(--space-xl) 0; border-bottom: 1px solid var(--hairline-soft);
+  margin-bottom: var(--space-xl);
+}
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--surface-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; flex-shrink: 0;
+}
+.profile-info h1 { font-size: 24px; font-weight: 600; margin-bottom: var(--space-xs); }
+.profile-info .subtitle { font-size: 14px; color: var(--muted); }
+.profile-info .stats-updated { font-size: 12px; color: var(--muted-soft); margin-top: var(--space-xs); }
+
+/* Mega Stats */
+.mega-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-base);
+  margin-bottom: var(--space-xl);
+}
+.mega-stat {
+  background: var(--surface-soft); border-radius: var(--rounded-md);
+  padding: var(--space-lg); text-align: center;
+}
+.mega-stat .stat-value { font-size: 28px; font-weight: 700; color: var(--ink); }
+.mega-stat .stat-label { font-size: 13px; color: var(--muted); margin-top: var(--space-xs); }
+
+/* Platform Tabs */
+.platform-tabs {
+  display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--hairline-soft); padding-bottom: 0;
+  overflow-x: auto;
+}
+.platform-tab {
+  padding: 12px 20px; font-size: 14px; font-weight: 500;
+  color: var(--muted); cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.15s; background: none; border-top: none;
+  border-left: none; border-right: none; font-family: var(--font);
+}
+.platform-tab:hover { color: var(--ink); }
+.platform-tab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+/* Platform Info Card */
+.platform-info {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-base);
+  margin-bottom: var(--space-lg); padding: var(--space-base);
+  background: var(--surface-soft); border-radius: var(--rounded-md);
+}
+.platform-info-item { text-align: center; }
+.platform-info-item .pi-value { font-size: 20px; font-weight: 600; }
+.platform-info-item .pi-label { font-size: 12px; color: var(--muted-soft); margin-top: 2px; }
+
+/* Card Grid */
+.card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+.card {
+  background: var(--canvas); border-radius: var(--rounded-md);
+  border: 1px solid var(--hairline-soft); overflow: hidden;
+}
+.card-cover { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface-soft); }
+.card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-header {
+  padding: var(--space-base) var(--space-base) var(--space-sm);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.card-body { padding: 0 var(--space-base) var(--space-base); }
+.card-body .video-title {
+  font-size: 15px; font-weight: 500; line-height: 1.25;
+  margin-bottom: var(--space-sm); display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm);
+  padding-top: var(--space-sm); border-top: 1px solid var(--hairline-soft);
+}
+.stat-item { text-align: center; }
+.stat-item .num { font-size: 15px; font-weight: 600; }
+.stat-item .label { font-size: 11px; color: var(--muted-soft); text-transform: uppercase; letter-spacing: 0.2px; }
+.card-time { font-size: 12px; color: var(--muted-soft); padding: var(--space-sm) var(--space-base) var(--space-base); }
+
+/* Loading & Empty */
+.loading { text-align: center; padding: var(--space-xxl); color: var(--muted); }
+.loading .spinner {
+  width: 32px; height: 32px; border: 3px solid var(--hairline);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.7s linear infinite; margin: 0 auto var(--space-base);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: var(--space-xxl); color: var(--muted); }
+
+/* Collect Stats Button */
+.collect-stats-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--rounded-sm);
+  background: var(--primary); color: var(--on-primary);
+  border: none; font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: var(--font);
+  margin-left: var(--space-lg);
+}
+.collect-stats-btn:hover { background: var(--primary-active); }
+.collect-stats-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.spinner-sm {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 744px) {
+  .app { padding: var(--space-base); }
+  .mega-stats { grid-template-columns: repeat(2, 1fr); }
+  .platform-info { grid-template-columns: repeat(3, 1fr); }
+  .card-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="logo"><a href="/">📡 <span>Social Monitor</span></a></div>
+    <button class="collect-stats-btn" @click="collectStats" :disabled="collecting">
+      <span v-if="collecting" class="spinner-sm"></span>
+      <span v-else>📊</span> 采集账号统计
+    </button>
+    <a href="/" class="back-link">← 返回</a>
+  </nav>
+
+  <!-- Profile Header -->
+  <div v-if="loading" class="loading">
+    <div class="spinner"></div>
+    <div>加载中...</div>
+  </div>
+
+  <template v-else-if="data">
+    <div class="profile-header">
+      <div class="profile-avatar">👤</div>
+      <div class="profile-info">
+        <h1>{{ accountName }}</h1>
+        <div class="subtitle">
+          关联 {{ platformLabels }} 共 {{ data.related_accounts.length }} 个平台账号
+        </div>
+        <div class="stats-updated" v-if="data.summary.stats_updated">
+          账号统计数据更新于 {{ data.summary.stats_updated.slice(5, 16) }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Mega Stats -->
+    <div class="mega-stats">
+      <div class="mega-stat">
+        <div class="stat-value">{{ fmtNum(data.summary.total_followers) }}</div>
+        <div class="stat-label">总粉丝</div>
+      </div>
+      <div class="mega-stat">
+        <div class="stat-value">{{ fmtNum(data.summary.total_digg) }}</div>
+        <div class="stat-label">总获赞</div>
+      </div>
+      <div class="mega-stat">
+        <div class="stat-value">{{ fmtNum(data.summary.total_play) }}</div>
+        <div class="stat-label">总播放</div>
+      </div>
+      <div class="mega-stat">
+        <div class="stat-value">{{ data.summary.total_videos }}</div>
+        <div class="stat-label">视频数</div>
+      </div>
+    </div>
+
+    <!-- Platform Tabs -->
+    <div class="platform-tabs">
+      <button class="platform-tab" :class="{active: currentTab === 'all'}" @click="currentTab='all'">
+        📊 全平台汇总
+      </button>
+      <button v-for="(bp, p) in data.by_platform" :key="p"
+              class="platform-tab" :class="{active: currentTab === p}"
+              @click="currentTab=p" v-html="platformIcon(p)">
+      </button>
+    </div>
+
+    <!-- Platform Info -->
+    <div v-if="currentTab !== 'all'" class="platform-info">
+      <div class="platform-info-item">
+        <div class="pi-value">{{ fmtNum(platformData.total_play) }}</div>
+        <div class="pi-label">播放</div>
+      </div>
+      <div class="platform-info-item">
+        <div class="pi-value">{{ fmtNum(platformData.total_digg) }}</div>
+        <div class="pi-label">点赞</div>
+      </div>
+      <div class="platform-info-item">
+        <div class="pi-value">{{ platformData.video_count }}</div>
+        <div class="pi-label">视频数</div>
+      </div>
+    </div>
+
+    <!-- Videos -->
+    <div v-if="displayVideos.length === 0" class="empty">暂无视频数据</div>
+    <div v-else class="card-grid">
+      <a v-for="v in displayVideos" :key="v.aweme_id"
+         :href="v.url || '#'" target="_blank" rel="noopener"
+         style="text-decoration:none;color:inherit;display:block">
+        <div class="card">
+          <div class="card-cover" v-if="v.cover_url">
+            <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer"
+                 @error="e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<span style=font-size:32px;opacity:0.3>📹</span>'; }">
+          </div>
+          <div class="card-header">
+            <span style="font-size:12px;color:var(--muted)">{{ platformLabel(v.platform) }}</span>
+          </div>
+          <div class="card-body">
+            <div class="video-title">{{ v.title || '(无标题)' }}</div>
+            <div class="card-stats">
+              <div class="stat-item"><div class="num">{{ fmtNum(v.play_count) }}</div><div class="label">播放</div></div>
+              <div class="stat-item"><div class="num">{{ fmtNum(v.digg_count) }}</div><div class="label">点赞</div></div>
+              <div class="stat-item"><div class="num">{{ fmtNum(v.comment_count) }}</div><div class="label">评论</div></div>
+              <div class="stat-item"><div class="num">{{ fmtNum(v.share_count || v.collect_count) }}</div><div class="label">{{ v.platform==='xiaohongshu'?'收藏':'分享' }}</div></div>
+            </div>
+          </div>
+          <div class="card-time">🕐 {{ fmtTime(v.first_seen) }}</div>
+        </div>
+      </a>
+    </div>
+  </template>
+
+  <div v-else class="empty" style="padding:80px 0">
+    <div style="font-size:48px;margin-bottom:var(--space-base)">🔍</div>
+    <div>账号不存在</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const data = ref(null);
+    const loading = ref(true);
+    const currentTab = ref('all');
+    const collecting = ref(false);
+
+    // 从 URL 获取账号 ID: /account.html?id=1
+    const params = new URLSearchParams(window.location.search);
+    const accountId = params.get('id') || '';
+
+    const accountName = computed(() => {
+      if (!data.value) return '';
+      return data.value.account.nickname || data.value.account.account_name;
+    });
+
+    const platformLabels = computed(() => {
+      if (!data.value) return '';
+      const labels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
+      return data.value.summary.platforms.map(p => labels[p] || p).join('、');
+    });
+
+    const platformData = computed(() => {
+      if (!data.value || currentTab.value === 'all') return {};
+      return data.value.by_platform[currentTab.value] || {};
+    });
+
+    const displayVideos = computed(() => {
+      if (!data.value) return [];
+      if (currentTab.value === 'all') return data.value.videos;
+      return platformData.value.videos || [];
+    });
+
+    function platformLabel(p) {
+      const labels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
+      return labels[p] || p;
+    }
+
+    function platformIcon(p) {
+      const icons = {
+        douyin: '<img src="douyin.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"> 抖音',
+        kuaishou: '<img src="kuaishou.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"> 快手',
+        xiaohongshu: '<img src="xiaohongshu.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"> 小红书',
+        shipinhao: '<img src="shipinhao.png" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"> 视频号',
+      };
+      return icons[p] || p;
+    }
+
+    function fmtNum(n) {
+      if (n === null || n === undefined) return '0';
+      if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+      return n.toLocaleString();
+    }
+
+    function fmtTime(t) {
+      if (!t) return '';
+      const parts = t.split(' ');
+      if (parts.length === 2) {
+        const d = parts[0].split('-');
+        const tm = parts[1].split(':');
+        if (d.length >= 3) return `${d[1]}/${d[2]} ${tm[0]}:${tm[1]}`;
+      }
+      return t;
+    }
+
+    async function fetchData() {
+      if (!accountId) { loading.value = false; return; }
+      loading.value = true;
+      try {
+        const resp = await fetch('/api/account/' + accountId);
+        if (!resp.ok) { data.value = null; return; }
+        data.value = await resp.json();
+      } catch (e) {
+        console.error('Failed:', e);
+        data.value = null;
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function collectStats() {
+      if (collecting.value) return;
+      collecting.value = true;
+      try {
+        await fetch('/api/collect/stats', { method: 'POST' });
+        // 等3秒后刷新
+        await new Promise(r => setTimeout(r, 3000));
+        await fetchData();
+      } catch (e) {
+        console.error('Collect stats failed:', e);
+      } finally {
+        collecting.value = false;
+      }
+    }
+
+    onMounted(fetchData);
+
+    return {
+      data, loading, currentTab, collecting,
+      accountId, accountName, platformLabels,
+      platformData, displayVideos,
+      platformLabel, platformIcon, fmtNum, fmtTime,
+      collectStats, fetchData,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

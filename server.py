@@ -146,11 +146,113 @@ class Handler(BaseHTTPRequestHandler):
             conn = get_db()
             accounts = [
                 dict(r) for r in conn.execute(
-                    'SELECT id, platform, account_name, nickname, is_active FROM accounts ORDER BY platform, id'
+                    'SELECT id, platform, account_name, nickname, is_active, follower_count, total_digg_count, total_play_count, total_following_count FROM accounts ORDER BY platform, id'
                 )
             ]
             conn.close()
             json_response(self, {'accounts': accounts})
+
+        elif parsed.path == '/api/collect/stats':
+            # 触发采集账号统计数据
+            try:
+                subprocess.Popen(
+                    [sys.executable or 'python3', str(COLLECTOR), '--stats-only'],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    cwd=str(MONITOR_DIR)
+                )
+                json_response(self, {'status': 'ok'})
+            except Exception as e:
+                json_response(self, {'status': 'error', 'message': str(e)}, 500)
+
+        elif parsed.path.startswith('/api/account/'):
+            # GET /api/account/<id>  — 账号详情，全平台汇总 + 分平台数据
+            try:
+                parts = parsed.path.split('/')
+                account_id = parts[3] if len(parts) >= 4 else ''
+                platform_filter = parts[4] if len(parts) >= 5 else None  # 可选: /api/account/<id>/douyin
+
+                conn = get_db()
+
+                # 账号信息
+                account = conn.execute(
+                    'SELECT * FROM accounts WHERE id=?', (account_id,)
+                ).fetchone()
+                if not account:
+                    json_response(self, {'error': '账号不存在'}, 404)
+                    conn.close()
+                    return
+
+                account = dict(account)
+
+                # 查询此 account_name 在所有平台上的数据
+                # 该账号可能在不同平台有不同记录，通过 account_name 关联
+                related_accounts = conn.execute(
+                    'SELECT * FROM accounts WHERE account_name=? ORDER BY platform',
+                    (account['account_name'],)
+                ).fetchall()
+
+                # 汇总信息
+                total_followers = sum(r['follower_count'] or 0 for r in related_accounts)
+                total_digg = sum(r['total_digg_count'] or 0 for r in related_accounts)
+                total_play = sum(r['total_play_count'] or 0 for r in related_accounts)
+
+                by_platform = {}
+                all_videos = []
+
+                for ra in related_accounts:
+                    p = ra['platform']
+                    # 获取该平台下的视频
+                    video_rows = conn.execute('''
+                        SELECT v.id, v.platform, v.account_name, v.aweme_id, v.title,
+                               v.first_seen, v.url, v.cover_url,
+                               s.collected_at, s.play_count, s.digg_count,
+                               s.comment_count, s.share_count, s.collect_count
+                        FROM videos v
+                        JOIN snapshots s ON s.video_id = v.id
+                        WHERE v.account_id = ?
+                          AND s.collected_at = (
+                              SELECT MAX(s2.collected_at) FROM snapshots s2 WHERE s2.video_id = s.video_id
+                          )
+                        ORDER BY s.collected_at DESC
+                    ''', (ra['id'],)).fetchall()
+
+                    videos = [dict(r) for r in video_rows]
+                    platform_videos = videos
+                    all_videos.extend(videos)
+
+                    total_video_play = sum(v.get('play_count', 0) or 0 for v in videos)
+                    total_video_digg = sum(v.get('digg_count', 0) or 0 for v in videos)
+
+                    by_platform[p] = {
+                        'account': dict(ra),
+                        'videos': platform_videos if not platform_filter or p == platform_filter else [],
+                        'video_count': len(videos),
+                        'total_play': total_video_play,
+                        'total_digg': total_video_digg,
+                    }
+
+                if platform_filter:
+                    all_videos = by_platform.get(platform_filter, {}).get('videos', [])
+
+                result = {
+                    'account': account,
+                    'related_accounts': [dict(r) for r in related_accounts],
+                    'summary': {
+                        'total_followers': total_followers,
+                        'total_digg': total_digg,
+                        'total_play': total_play,
+                        'total_videos': len(all_videos),
+                        'platforms': list(by_platform.keys()),
+                        'stats_updated': account.get('account_stats_updated', ''),
+                    },
+                    'by_platform': by_platform,
+                    'videos': all_videos,
+                }
+
+                conn.close()
+                json_response(self, result)
+            except Exception as e:
+                json_response(self, {'error': str(e)}, 500)
 
         elif parsed.path == '/api/collect/log':
             log_path = MONITOR_DIR / 'collect_status.json'

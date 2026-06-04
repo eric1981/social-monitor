@@ -194,6 +194,26 @@ body {
 .trend-point .tp-time { color: var(--muted-soft); }
 .trend-point .tp-play { color: var(--ink); font-weight: 600; }
 
+/* ── Accounts List ─────────────────────────────── */
+.accounts-list { display: flex; flex-direction: column; gap: var(--space-md); }
+.account-card {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-base) var(--space-lg);
+  border: 1px solid var(--hairline-soft); border-radius: var(--rounded-md);
+  text-decoration: none; color: inherit;
+  transition: box-shadow 0.15s;
+}
+.account-card:hover { box-shadow: var(--shadow-card); border-color: var(--hairline); }
+.ac-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--surface-soft); display: flex;
+  align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+}
+.ac-info { flex: 1; }
+.ac-name { font-size: 16px; font-weight: 500; }
+.ac-meta { font-size: 13px; color: var(--muted-soft); margin-top: 2px; }
+.ac-arrow { font-size: 18px; color: var(--muted-soft); }
+
 /* ── Loading ─────────────────────────────────────── */
 .loading {
   text-align: center; padding: var(--space-xxl); color: var(--muted);
@@ -289,6 +309,7 @@ body {
       <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="kuaishou.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
       <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
       <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
+      <a :class="{active: tab==='accounts'}" @click="setTab('accounts')" style="margin-left:var(--space-md);opacity:0.6">👤 账号</a>
     </div>
     <div class="nav-right">
       <a @click="triggerCollect" style="cursor:pointer;position:relative;">
@@ -373,8 +394,22 @@ body {
     </span>
   </div>
 
+  <!-- Accounts Tab -->
+  <div v-if="tab === 'accounts'" class="accounts-list">
+    <div v-for="acct in accountOptionsWithPlatform" :key="acct.key" class="account-row">
+      <a :href="'/account.html?id=' + acct.id" target="_blank" class="account-card">
+        <div class="ac-avatar">👤</div>
+        <div class="ac-info">
+          <div class="ac-name">{{ acct.label }}</div>
+          <div class="ac-meta" v-if="acct.platform">平台: {{ acct.platform }}</div>
+        </div>
+        <span class="ac-arrow">→</span>
+      </a>
+    </div>
+  </div>
+
   <!-- Loading -->
-  <div v-if="loading" class="loading">
+  <div v-else-if="loading" class="loading">
     <div class="spinner"></div>
     <div>加载中...</div>
   </div>
@@ -394,7 +429,7 @@ body {
         </div>
         <div class="card-header">
           <span class="platform-badge" v-html="platformLabel(v.platform)"></span>
-          <span class="account-name">{{ accountLabel(v) }}</span>
+          <a :href="'/account.html?id=' + accountIdForVideo(v)" target="_blank" class="account-name" style="text-decoration:none;color:var(--muted);cursor:pointer;" @click.stop>{{ accountLabel(v) }}</a>
         </div>
         <div class="card-body">
           <div class="video-title">{{ v.title || '(无标题)' }}</div>
@@ -564,11 +599,18 @@ createApp({
       return data.value.accounts
         .filter(a => a.is_active)
         .sort((a, b) => a.platform.localeCompare(b.platform) || a.account_name.localeCompare(b.account_name))
-        .map(a => ({ key: a.account_name, label: `${platMap[a.account_name]}：${nickMap[a.account_name]}` }));
+        .map(a => ({ key: a.account_name, label: `${platMap[a.account_name]}：${nickMap[a.account_name]}`,
+                     id: a.id, platform: platformLabels[a.platform] || a.platform }));
     });
 
     function accountLabel(v) {
       return `${v.nickname || v.account_name}`;
+    }
+
+    function accountIdForVideo(v) {
+      // 从 accounts 列表中找到对应账号的 id
+      const a = data.value.accounts.find(x => x.account_name === v.account_name && x.platform === v.platform);
+      return a ? a.id : '';
     }
 
     function publishTime(v) {
@@ -868,7 +910,7 @@ createApp({
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
       loading, refreshInterval, collecting, collectProgress, collectResults, relogining, reloginMsg,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
-      platformLabel, accountLabel, publishTime, proxyImage, onCoverError,
+      platformLabel, accountLabel, accountIdForVideo, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect, relogin,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,

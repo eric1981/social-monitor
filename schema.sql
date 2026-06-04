@@ -9,6 +9,11 @@ CREATE TABLE IF NOT EXISTS accounts (
     sec_uid      TEXT,                  -- 平台用户标识（用于API查询）
     is_active    INTEGER DEFAULT 1,     -- 是否在监控中
     created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    follower_count      INTEGER DEFAULT 0,   -- 粉丝数
+    total_digg_count    INTEGER DEFAULT 0,   -- 总获赞数
+    total_play_count    INTEGER DEFAULT 0,   -- 总播放数
+    total_following_count INTEGER DEFAULT 0, -- 关注数
+    account_stats_updated DATETIME,           -- 账号统计信息上次更新时间
     UNIQUE(platform, account_name)
 );
 

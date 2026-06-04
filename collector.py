@@ -557,6 +557,8 @@ def main():
     parser.add_argument('--platform', choices=['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'])
     parser.add_argument('--account')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--stats-only', action='store_true',
+                        help='仅采集账号统计数据（粉丝数等），不采集视频数据')
     args = parser.parse_args()
 
     conn = get_db()
@@ -577,13 +579,17 @@ def main():
     done = 0
     for platform, accts in platforms.items():
         if args.dry_run:
-            print(f"\n  [DRY-RUN] {platform}: {len(accts)} 个账号")
+            print(f"\\n  [DRY-RUN] {platform}: {len(accts)} 个账号")
             for a in accts:
                 names = []
                 if a['nickname']:
                     names.append(f"nick={a['nickname']}")
                 extra = f" ({', '.join(names)})" if names else ""
                 print(f"    - {a['account_name']}{extra}")
+        elif args.stats_only:
+            collect_account_stats(conn, platform, accts)
+            done += len(accts)
+            write_status('running', f'{platform} 账号统计完成', done, total)
         else:
             collect_platform(conn, platform, accts)
             done += len(accts)
@@ -602,8 +608,85 @@ def main():
             json.dump(existing, f, ensure_ascii=False)
     except:
         pass
-    print(f"\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+
+WIN_STATS_SCRIPT = r"C:\Users\NINGMEI\Desktop\social-monitor\win_collect_stats.py"
+
+
+def collect_account_stats(conn, platform, accounts):
+    for account in accounts:
+        account_name = account['account_name']
+        account_id = account['id']
+        print(f"  [账号统计] {platform}/{account_name} — 开始采集...", flush=True)
+        # 同步 cookie
+        if platform == 'shipinhao':
+            src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / 'tencent_uploader' / account_name
+            win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies/tencent_uploader")
+            if src.exists():
+                import shutil
+                win_cookies.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(str(src), str(win_cookies / account_name))
+        else:
+            src = COOKIES_DIR / f"{platform}_{account_name}.json"
+            if src.exists():
+                import shutil
+                win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                win_cookies.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(str(src), str(win_cookies / f"{platform}_{account_name}.json"))
+        result = subprocess.run(
+            ['cmd.exe', '/c', 'python', WIN_STATS_SCRIPT, platform, account_name],
+            capture_output=True, text=False, timeout=120
+        )
+        if result.returncode != 0:
+            try:
+                err = result.stderr.decode('gbk', errors='replace')[:300]
+            except:
+                err = str(result.stderr)[:300]
+            print(f"  [账号统计] {platform}/{account_name} — 失败: {err}", flush=True)
+            _COLLECT_RESULTS.append({
+                'platform': platform, 'account': account_name,
+                'nickname': account.get('nickname', account_name),
+                'status': 'error', 'message': f'账号统计采集失败: {err}'
+            })
+            continue
+        tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"stats_{platform}_{account_name}.json"
+        if not tmp_file.exists():
+            print(f"  [账号统计] {platform}/{account_name} — 未生成结果文件", flush=True)
+            _COLLECT_RESULTS.append({
+                'platform': platform, 'account': account_name,
+                'nickname': account.get('nickname', account_name),
+                'status': 'error', 'message': '账号统计: 未生成结果文件'
+            })
+            continue
+        with open(str(tmp_file), 'r', encoding='utf-8') as f:
+            stats = json.load(f)
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            '''UPDATE accounts SET
+               follower_count=?, total_digg_count=?, total_play_count=?,
+               total_following_count=?, account_stats_updated=?
+               WHERE id=?''',
+            (stats.get('follower_count', 0),
+             stats.get('total_digg_count', 0),
+             stats.get('total_play_count', 0),
+             stats.get('total_following_count', 0),
+             now, account_id)
+        )
+        conn.commit()
+        msg = f'粉丝={stats.get("follower_count",0)}, 获赞={stats.get("total_digg_count",0)}'
+        print(f"  [账号统计] {platform}/{account_name} — {msg}", flush=True)
+        _COLLECT_RESULTS.append({
+            'platform': platform, 'account': account_name,
+            'nickname': account.get('nickname', account_name),
+            'status': 'ok', 'message': msg
+        })
+        try:
+            tmp_file.unlink()
+        except:
+            pass
 
 
 if __name__ == '__main__':
     main()
+
