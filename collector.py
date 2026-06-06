@@ -522,9 +522,13 @@ def collect_platform(conn, platform: str, accounts):
         try:
             collector(conn, acct)
             _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'ok'})
+            conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('ok', acct['id']))
+            conn.commit()
         except Exception as e:
             err_msg = str(e)[:100]
             _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'error', 'message': err_msg})
+            conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('failed', acct['id']))
+            conn.commit()
             print(f"  [错误] {platform}/{acct['account_name']}: {e}", flush=True)
 
 
@@ -683,7 +687,7 @@ def collect_account_stats(conn, platform, accounts):
         print(f"  [账号统计] {platform}/{account_name} — {msg}", flush=True)
         _COLLECT_RESULTS.append({
             'platform': platform, 'account': account_name,
-            'nickname': account.get('nickname', account_name),
+            'nickname': account['nickname'] or account_name,
             'status': 'ok', 'message': msg
         })
         try:

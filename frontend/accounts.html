@@ -65,6 +65,13 @@ body {
 .ac-name { font-size: 16px; font-weight: 500; }
 .ac-meta { font-size: 13px; color: var(--muted-soft); margin-top: 2px; }
 .ac-arrow { font-size: 18px; color: var(--muted-soft); }
+.cookie-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; background: #ff385c;
+  margin-right: 6px; vertical-align: middle;
+  flex-shrink: 0;
+}
+.ac-name { display: flex; align-items: center; }
 .loading { text-align: center; padding: 80px 0; color: var(--muted); }
 .loading .spinner {
   width: 32px; height: 32px; border: 3px solid var(--hairline);
@@ -89,7 +96,10 @@ body {
       <a v-for="a in accts" :key="a.id" :href="'/account.html?id=' + a.id" class="account-card">
         <div class="ac-avatar">👤</div>
         <div class="ac-info">
-          <div class="ac-name">{{ a.nickname || a.account_name }}</div>
+          <div class="ac-name">
+            <span v-if="a.cookie_status === 'failed'" class="cookie-dot" title="Cookie 已失效"></span>
+            {{ a.nickname || a.account_name }}
+          </div>
           <div class="ac-meta">{{ a.account_name }}</div>
         </div>
         <span class="ac-arrow">→</span>

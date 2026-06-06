@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     profile_avatar_url  TEXT DEFAULT '',      -- 头像URL
     profile_like_count  INTEGER DEFAULT 0,   -- 主页获赞数
     account_stats_updated DATETIME,           -- 账号统计信息上次更新时间
+    cookie_status       TEXT DEFAULT 'unknown', -- cookie状态: ok/failed/unknown
     UNIQUE(platform, account_name)
 );
 
