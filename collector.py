@@ -650,7 +650,7 @@ def collect_account_stats(conn, platform, accounts):
             print(f"  [账号统计] {platform}/{account_name} — 失败: {err}", flush=True)
             _COLLECT_RESULTS.append({
                 'platform': platform, 'account': account_name,
-                'nickname': account.get('nickname', account_name),
+                'nickname': account['nickname'] or account_name,
                 'status': 'error', 'message': f'账号统计采集失败: {err}'
             })
             continue
@@ -659,17 +659,14 @@ def collect_account_stats(conn, platform, accounts):
             print(f"  [账号统计] {platform}/{account_name} — 未生成结果文件", flush=True)
             _COLLECT_RESULTS.append({
                 'platform': platform, 'account': account_name,
-                'nickname': account.get('nickname', account_name),
+                'nickname': account['nickname'] or account_name,
                 'status': 'error', 'message': '账号统计: 未生成结果文件'
             })
             continue
         with open(str(tmp_file), 'r', encoding='utf-8') as f:
             stats = json.load(f)
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # 更新昵称（如果采集到的昵称不为空且与当前不同）
-        nickname = stats.get('nickname', '') or ''
-        if nickname and nickname != account['nickname']:
-            conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
+        # 昵称不在这里更新——视频采集时才从 API 获取准确昵称
         conn.execute(
             '''UPDATE accounts SET
                follower_count=?, total_digg_count=?, total_play_count=?,
