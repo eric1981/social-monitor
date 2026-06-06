@@ -665,12 +665,17 @@ def collect_account_stats(conn, platform, accounts):
         conn.execute(
             '''UPDATE accounts SET
                follower_count=?, total_digg_count=?, total_play_count=?,
-               total_following_count=?, account_stats_updated=?
+               total_following_count=?, profile_bio=?, profile_douyin_id=?,
+               profile_avatar_url=?, profile_like_count=?, account_stats_updated=?
                WHERE id=?''',
             (stats.get('follower_count', 0),
              stats.get('total_digg_count', 0),
              stats.get('total_play_count', 0),
              stats.get('total_following_count', 0),
+             stats.get('profile_bio', ''),
+             stats.get('profile_douyin_id', ''),
+             stats.get('profile_avatar_url', ''),
+             stats.get('profile_like_count', 0),
              now, account_id)
         )
         conn.commit()

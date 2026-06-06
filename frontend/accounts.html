@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>账号列表 — Social Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #ff385c;
+  --ink: #222222;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --hairline: #dddddd;
+  --hairline-soft: #ebebeb;
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --rounded-sm: 8px;
+  --rounded-md: 14px;
+  --rounded-full: 9999px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --font: 'Inter', -apple-system, system-ui, sans-serif;
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font); background: var(--canvas); color: var(--ink);
+  font-size: 14px; line-height: 1.43;
+}
+.app { max-width: 900px; margin: 0 auto; padding: var(--space-lg); }
+.top-nav {
+  display: flex; align-items: center; height: 64px;
+  border-bottom: 1px solid var(--hairline-soft);
+  margin-bottom: var(--space-xl); gap: var(--space-lg);
+}
+.top-nav .logo { font-size: 20px; font-weight: 600; color: var(--primary); }
+.top-nav .logo a { text-decoration: none; color: inherit; }
+.top-nav .logo span { color: var(--ink); }
+.top-nav .back-link { font-size: 14px; color: #428bff; text-decoration: none; margin-left: auto; }
+.top-nav .back-link:hover { text-decoration: underline; }
+.platform-group { margin-bottom: var(--space-xl); }
+.platform-title {
+  font-size: 16px; font-weight: 600; margin-bottom: var(--space-base);
+  padding-bottom: var(--space-sm); border-bottom: 1px solid var(--hairline-soft);
+}
+.account-card {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-base) var(--space-lg);
+  border: 1px solid var(--hairline-soft); border-radius: var(--rounded-md);
+  text-decoration: none; color: inherit; margin-bottom: var(--space-sm);
+  transition: box-shadow 0.15s;
+}
+.account-card:hover { box-shadow: var(--shadow-card); border-color: var(--hairline); }
+.ac-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--surface-soft); display: flex;
+  align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+}
+.ac-info { flex: 1; }
+.ac-name { font-size: 16px; font-weight: 500; }
+.ac-meta { font-size: 13px; color: var(--muted-soft); margin-top: 2px; }
+.ac-arrow { font-size: 18px; color: var(--muted-soft); }
+.loading { text-align: center; padding: 80px 0; color: var(--muted); }
+.loading .spinner {
+  width: 32px; height: 32px; border: 3px solid var(--hairline);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.7s linear infinite; margin: 0 auto var(--space-base);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="top-nav">
+    <div class="logo"><a href="/">📡 <span>Social Monitor</span></a></div>
+    <a href="/" class="back-link">← 返回首页</a>
+  </nav>
+
+  <div v-if="loading" class="loading"><div class="spinner"></div><div>加载中...</div></div>
+
+  <template v-else>
+    <div v-for="(accts, p) in groupedAccounts" :key="p" class="platform-group">
+      <div class="platform-title">{{ platformLabel(p) }}（{{ accts.length }}）</div>
+      <a v-for="a in accts" :key="a.id" :href="'/account.html?id=' + a.id" class="account-card">
+        <div class="ac-avatar">👤</div>
+        <div class="ac-info">
+          <div class="ac-name">{{ a.nickname || a.account_name }}</div>
+          <div class="ac-meta">{{ a.account_name }}</div>
+        </div>
+        <span class="ac-arrow">→</span>
+      </a>
+    </div>
+  </template>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const accounts = ref([]);
+    const loading = ref(true);
+
+    const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
+    const platformOrder = ['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'];
+
+    const groupedAccounts = computed(() => {
+      const groups = {};
+      platformOrder.forEach(p => groups[p] = []);
+      accounts.value.forEach(a => {
+        if (a.is_active && groups[a.platform]) {
+          groups[a.platform].push(a);
+        }
+      });
+      // 只返回有账号的平台
+      const result = {};
+      platformOrder.forEach(p => { if (groups[p].length) result[p] = groups[p]; });
+      return result;
+    });
+
+    function platformLabel(p) {
+      return platformLabels[p] || p;
+    }
+
+    onMounted(async () => {
+      try {
+        const resp = await fetch('/api/accounts');
+        const d = await resp.json();
+        accounts.value = d.accounts || [];
+      } catch (e) {
+        console.error('Failed:', e);
+      } finally {
+        loading.value = false;
+      }
+    });
+
+    return { accounts, loading, groupedAccounts, platformLabel };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

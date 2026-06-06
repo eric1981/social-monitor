@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS accounts (
     total_digg_count    INTEGER DEFAULT 0,   -- 总获赞数
     total_play_count    INTEGER DEFAULT 0,   -- 总播放数
     total_following_count INTEGER DEFAULT 0, -- 关注数
+    profile_bio         TEXT DEFAULT '',      -- 个人简介
+    profile_douyin_id   TEXT DEFAULT '',      -- 抖音号
+    profile_avatar_url  TEXT DEFAULT '',      -- 头像URL
+    profile_like_count  INTEGER DEFAULT 0,   -- 主页获赞数
     account_stats_updated DATETIME,           -- 账号统计信息上次更新时间
     UNIQUE(platform, account_name)
 );

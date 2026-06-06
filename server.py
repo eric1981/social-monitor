@@ -146,7 +146,7 @@ class Handler(BaseHTTPRequestHandler):
             conn = get_db()
             accounts = [
                 dict(r) for r in conn.execute(
-                    'SELECT id, platform, account_name, nickname, is_active, follower_count, total_digg_count, total_play_count, total_following_count FROM accounts ORDER BY platform, id'
+                    'SELECT id, platform, account_name, nickname, is_active, follower_count, total_digg_count, total_play_count, total_following_count, profile_bio, profile_douyin_id, profile_avatar_url, profile_like_count FROM accounts ORDER BY platform, id'
                 )
             ]
             conn.close()

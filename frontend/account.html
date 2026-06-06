@@ -191,7 +191,7 @@ body {
       <span v-if="collecting" class="spinner-sm"></span>
       <span v-else>📊</span> 采集账号统计
     </button>
-    <a href="/" class="back-link">← 返回</a>
+    <a href="/accounts.html" class="back-link">← 返回账号列表</a>
   </nav>
 
   <!-- Profile Header -->
@@ -207,6 +207,12 @@ body {
         <h1>{{ accountName }}</h1>
         <div class="subtitle">
           关联 {{ platformLabels }} 共 {{ data.related_accounts.length }} 个平台账号
+        </div>
+        <div class="profile-bio" v-if="data.account.profile_bio" style="margin-top:var(--space-sm);font-size:14px;color:var(--body);line-height:1.5;">
+          {{ data.account.profile_bio }}
+        </div>
+        <div class="profile-douyin-id" v-if="data.account.profile_douyin_id" style="margin-top:var(--space-xs);font-size:13px;color:var(--muted);">
+          抖音号：{{ data.account.profile_douyin_id }}
         </div>
         <div class="stats-updated" v-if="data.summary.stats_updated">
           账号统计数据更新于 {{ data.summary.stats_updated.slice(5, 16) }}
@@ -395,7 +401,13 @@ createApp({
       }
     }
 
-    onMounted(fetchData);
+    onMounted(() => {
+      if (!accountId) {
+        window.location.href = '/accounts.html';
+        return;
+      }
+      fetchData();
+    });
 
     return {
       data, loading, currentTab, collecting,
