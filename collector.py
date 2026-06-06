@@ -666,6 +666,10 @@ def collect_account_stats(conn, platform, accounts):
         with open(str(tmp_file), 'r', encoding='utf-8') as f:
             stats = json.load(f)
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # 更新昵称（如果采集到的昵称不为空且与当前不同）
+        nickname = stats.get('nickname', '') or ''
+        if nickname and nickname != account['nickname']:
+            conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
         conn.execute(
             '''UPDATE accounts SET
                follower_count=?, total_digg_count=?, total_play_count=?,
