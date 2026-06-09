@@ -8,6 +8,7 @@
 <style>
 :root {
   --primary: #ff385c;
+  --primary-active: #e00b41;
   --ink: #222222;
   --muted: #6a6a6a;
   --muted-soft: #929292;
@@ -15,6 +16,9 @@
   --hairline-soft: #ebebeb;
   --canvas: #ffffff;
   --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
+  --on-primary: #ffffff;
+  --legal-link: #428bff;
   --rounded-sm: 8px;
   --rounded-md: 14px;
   --rounded-full: 9999px;
@@ -24,15 +28,19 @@
   --space-base: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
+  --space-xxl: 48px;
   --font: 'Inter', -apple-system, system-ui, sans-serif;
   --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
+  --card-radius: 16px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: var(--font); background: var(--canvas); color: var(--ink);
   font-size: 14px; line-height: 1.43;
 }
-.app { max-width: 900px; margin: 0 auto; padding: var(--space-lg); }
+.app { max-width: 1200px; margin: 0 auto; padding: var(--space-lg); }
+
+/* Top Nav */
 .top-nav {
   display: flex; align-items: center; height: 64px;
   border-bottom: 1px solid var(--hairline-soft);
@@ -41,37 +49,141 @@ body {
 .top-nav .logo { font-size: 20px; font-weight: 600; color: var(--primary); }
 .top-nav .logo a { text-decoration: none; color: inherit; }
 .top-nav .logo span { color: var(--ink); }
-.top-nav .back-link { font-size: 14px; color: #428bff; text-decoration: none; margin-left: auto; }
+.top-nav .back-link { font-size: 14px; color: var(--legal-link); text-decoration: none; margin-left: auto; }
 .top-nav .back-link:hover { text-decoration: underline; }
-.platform-group { margin-bottom: var(--space-xl); }
-.platform-title {
-  font-size: 16px; font-weight: 600; margin-bottom: var(--space-base);
-  padding-bottom: var(--space-sm); border-bottom: 1px solid var(--hairline-soft);
+
+/* Page Header */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-lg);
 }
+.page-header h2 { font-size: 18px; font-weight: 600; }
+.page-header .count-badge {
+  font-size: 13px; color: var(--muted-soft);
+  background: var(--surface-soft); padding: 4px 12px;
+  border-radius: var(--rounded-full);
+}
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-lg);
+}
+
+/* Account Card */
 .account-card {
-  display: flex; align-items: center; gap: var(--space-base);
-  padding: var(--space-base) var(--space-lg);
-  border: 1px solid var(--hairline-soft); border-radius: var(--rounded-md);
-  text-decoration: none; color: inherit; margin-bottom: var(--space-sm);
-  transition: box-shadow 0.15s;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--card-radius);
+  text-decoration: none; color: inherit;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  display: flex; flex-direction: column;
 }
-.account-card:hover { box-shadow: var(--shadow-card); border-color: var(--hairline); }
-.ac-avatar {
-  width: 48px; height: 48px; border-radius: 50%;
-  background: var(--surface-soft); display: flex;
-  align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+.account-card:hover {
+  box-shadow: var(--shadow-card);
+  border-color: var(--hairline);
 }
-.ac-info { flex: 1; }
-.ac-name { font-size: 16px; font-weight: 500; }
-.ac-meta { font-size: 13px; color: var(--muted-soft); margin-top: 2px; }
-.ac-arrow { font-size: 18px; color: var(--muted-soft); }
+
+/* Card Top — Platform stripe */
+.card-platform-stripe {
+  height: 4px; flex-shrink: 0;
+}
+
+/* Card Header — Avatar + Name + Platform */
+.card-header {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-lg) var(--space-base) var(--space-md);
+}
+.card-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--surface-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+  overflow: hidden; position: relative;
+}
+.card-avatar img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.card-avatar .avatar-fallback {
+  font-size: 26px; opacity: 0.5;
+}
+.card-name-area { flex: 1; min-width: 0; }
+.card-name {
+  font-size: 16px; font-weight: 600;
+  display: flex; align-items: center; gap: var(--space-sm);
+}
+.card-subname {
+  font-size: 12px; color: var(--muted-soft);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Cookie dot */
 .cookie-dot {
   display: inline-block; width: 8px; height: 8px;
-  border-radius: 50%; background: #ff385c;
-  margin-right: 6px; vertical-align: middle;
+  border-radius: 50%; flex-shrink: 0;
+}
+.cookie-dot.ok { background: #22c55e; }
+.cookie-dot.failed { background: #ef4444; }
+.cookie-dot.unknown { background: #f59e0b; }
+
+/* Platform icon pill */
+.platform-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 500;
+  padding: 3px 10px; border-radius: var(--rounded-full);
+  background: var(--surface-soft); color: var(--muted);
   flex-shrink: 0;
 }
-.ac-name { display: flex; align-items: center; }
+.platform-pill img { width: 12px; height: 12px; border-radius: 1px; }
+
+/* Stat Grid */
+.card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-base);
+  margin: 0 var(--space-base);
+  border-top: 1px solid var(--hairline-soft);
+  border-bottom: 1px solid var(--hairline-soft);
+}
+.stat-cell { text-align: center; }
+.stat-cell .stat-value {
+  font-size: 17px; font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.stat-cell .stat-label {
+  font-size: 11px; color: var(--muted-soft);
+  margin-top: 1px; text-transform: uppercase; letter-spacing: 0.15px;
+}
+
+/* Card Footer — Updated time + action hint */
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-sm) var(--space-base) var(--space-base);
+}
+.card-footer .updated-at {
+  font-size: 11px; color: var(--muted-soft);
+}
+.card-footer .view-hint {
+  font-size: 12px; color: var(--legal-link);
+  opacity: 0; transition: opacity 0.15s;
+}
+.account-card:hover .view-hint { opacity: 1; }
+
+/* Cookie status row */
+.card-cookie-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 var(--space-base) var(--space-sm);
+  font-size: 11px;
+  margin-top: -4px;
+}
+.card-cookie-row .cookie-label.ok { color: #22c55e; }
+.card-cookie-row .cookie-label.failed { color: #ef4444; }
+.card-cookie-row .cookie-label.unknown { color: #f59e0b; }
+
+/* Loading */
 .loading { text-align: center; padding: 80px 0; color: var(--muted); }
 .loading .spinner {
   width: 32px; height: 32px; border: 3px solid var(--hairline);
@@ -79,6 +191,12 @@ body {
   animation: spin 0.7s linear infinite; margin: 0 auto var(--space-base);
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 744px) {
+  .app { padding: var(--space-base); }
+  .card-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -88,22 +206,86 @@ body {
     <a href="/" class="back-link">← 返回首页</a>
   </nav>
 
-  <div v-if="loading" class="loading"><div class="spinner"></div><div>加载中...</div></div>
+  <div v-if="loading" class="loading">
+    <div class="spinner"></div>
+    <div>加载中...</div>
+  </div>
 
   <template v-else>
-    <div v-for="(accts, p) in groupedAccounts" :key="p" class="platform-group">
-      <div class="platform-title">{{ platformLabel(p) }}（{{ accts.length }}）</div>
-      <a v-for="a in accts" :key="a.id" :href="'/account.html?id=' + a.id" class="account-card">
-        <div class="ac-avatar">👤</div>
-        <div class="ac-info">
-          <div class="ac-name">
-            <span v-if="a.cookie_status === 'failed'" class="cookie-dot" title="Cookie 已失效"></span>
-            {{ a.nickname || a.account_name }}
+    <!-- Page Header -->
+    <div class="page-header">
+      <h2>👤 账号列表</h2>
+      <span class="count-badge">{{ accounts.length }} 个账号</span>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="card-grid">
+      <a v-for="a in accounts" :key="a.id"
+         :href="'/account.html?id=' + a.id"
+         class="account-card">
+
+        <!-- Platform color stripe -->
+        <div class="card-platform-stripe"
+             :style="{ background: platformColor(a.platform) }"></div>
+
+        <!-- Header: Avatar + Name + Platform -->
+        <div class="card-header">
+          <div class="card-avatar">
+            <img v-if="a.profile_avatar_url"
+                 :src="a.profile_avatar_url" alt=""
+                 loading="lazy" referrerpolicy="no-referrer"
+                 @error="e => { e.target.style.display='none'; e.target.parentElement.querySelector('.avatar-fallback').style.display='inline'; }">
+            <span class="avatar-fallback" v-show="!a.profile_avatar_url">👤</span>
           </div>
-          <div class="ac-meta">{{ a.account_name }}</div>
+          <div class="card-name-area">
+            <div class="card-name">
+              <span class="cookie-dot" :class="a.cookie_status"
+                    :title="'Cookie: ' + (cookieLabel(a.cookie_status))"></span>
+              {{ a.nickname || a.account_name }}
+            </div>
+            <div class="card-subname">{{ a.account_name }}</div>
+          </div>
+          <span class="platform-pill" v-html="platformIcon(a.platform)"></span>
         </div>
-        <span class="ac-arrow">→</span>
+
+        <!-- Stats -->
+        <div class="card-stats">
+          <div class="stat-cell">
+            <div class="stat-value">{{ fmtNum(a.follower_count) }}</div>
+            <div class="stat-label">粉丝</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-value">{{ fmtNum(a.total_play_count) }}</div>
+            <div class="stat-label">播放</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-value">{{ fmtNum(a.total_digg_count) }}</div>
+            <div class="stat-label">获赞</div>
+          </div>
+        </div>
+
+        <!-- Cookie status row (extra detail for failed/unknown) -->
+        <div class="card-cookie-row" v-if="a.cookie_status !== 'ok'">
+          <span class="cookie-dot" :class="a.cookie_status"></span>
+          <span class="cookie-label" :class="a.cookie_status">
+            Cookie {{ cookieLabel(a.cookie_status) }}
+          </span>
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+          <span class="updated-at" v-if="a.account_stats_updated">
+            📅 {{ fmtDate(a.account_stats_updated) }}
+          </span>
+          <span class="updated-at" v-else>—</span>
+          <span class="view-hint">查看详情 →</span>
+        </div>
       </a>
+    </div>
+
+    <div v-if="accounts.length === 0" style="text-align:center;padding:80px 0;color:var(--muted-soft);">
+      <div style="font-size:40px;margin-bottom:var(--space-base)">📭</div>
+      <div>暂无账号数据</div>
     </div>
   </template>
 </div>
@@ -118,24 +300,44 @@ createApp({
     const loading = ref(true);
 
     const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
-    const platformOrder = ['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'];
 
-    const groupedAccounts = computed(() => {
-      const groups = {};
-      platformOrder.forEach(p => groups[p] = []);
-      accounts.value.forEach(a => {
-        if (a.is_active && groups[a.platform]) {
-          groups[a.platform].push(a);
-        }
-      });
-      // 只返回有账号的平台
-      const result = {};
-      platformOrder.forEach(p => { if (groups[p].length) result[p] = groups[p]; });
-      return result;
-    });
+    function platformColor(p) {
+      const colors = {
+        douyin: '#111111',
+        kuaishou: '#ff4906',
+        xiaohongshu: '#ff2442',
+        shipinhao: '#07c160',
+      };
+      return colors[p] || '#dddddd';
+    }
 
-    function platformLabel(p) {
-      return platformLabels[p] || p;
+    function platformIcon(p) {
+      const icons = {
+        douyin: '<img src="douyin.png"> 抖音',
+        kuaishou: '<img src="kuaishou.png"> 快手',
+        xiaohongshu: '<img src="xiaohongshu.png"> 小红书',
+        shipinhao: '<img src="shipinhao.png"> 视频号',
+      };
+      return icons[p] || p;
+    }
+
+    function cookieLabel(s) {
+      const labels = { ok: '正常', failed: '已失效', unknown: '未知' };
+      return labels[s] || s;
+    }
+
+    function fmtNum(n) {
+      if (n === null || n === undefined) return '—';
+      if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+      if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+      return n.toLocaleString();
+    }
+
+    function fmtDate(t) {
+      if (!t) return '';
+      // t format: "2026-06-09 06:00:00"
+      const d = t.slice(5, 16).replace(' ', ' ');
+      return d;
     }
 
     onMounted(async () => {
@@ -150,7 +352,11 @@ createApp({
       }
     });
 
-    return { accounts, loading, groupedAccounts, platformLabel };
+    return {
+      accounts, loading,
+      platformColor, platformIcon, cookieLabel,
+      fmtNum, fmtDate,
+    };
   }
 }).mount('#app');
 </script>
