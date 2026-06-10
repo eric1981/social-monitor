@@ -243,10 +243,10 @@ body {
       <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📊 跨平台对比</h3>
       <div class="compare-table">
         <div v-for="g in compareGroups" :key="g.account_name" class="compare-row">
-          <div class="compare-name">{{ g.account_name }}</div>
+          <div class="compare-name">{{ nickForGroup(g) }}</div>
           <div class="compare-cells">
             <span v-for="(p, plat) in g.platforms" :key="plat" class="compare-cell" :class="p.cookie_status">
-              <span class="cc-platform">{{ plat === 'douyin' ? '🎵' : plat === 'kuaishou' ? '⚡' : plat === 'xiaohongshu' ? '📕' : '📺' }}</span>
+              <span class="cc-platform">{{ plat === 'douyin' ? '抖音' : plat === 'kuaishou' ? '快手' : plat === 'xiaohongshu' ? '小红书' : '视频号' }}</span>
               <span class="cc-followers">{{ fmtNum(p.followers) }}</span>
               <span class="cc-plays">{{ fmtNum(p.plays) }}</span>
             </span>
@@ -364,6 +364,14 @@ createApp({
       return labels[s] || s;
     }
 
+    function nickForGroup(g) {
+      // 取第一个有昵称的平台昵称，否则用 account_name
+      for (const p of Object.values(g.platforms || {})) {
+        if (p.nickname) return p.nickname;
+      }
+      return g.account_name;
+    }
+
     function fmtNum(n) {
       if (n === null || n === undefined) return '—';
       if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
@@ -402,7 +410,7 @@ createApp({
 
     return {
       accounts, loading, compareGroups,
-      platformColor, platformIcon, cookieLabel,
+      platformColor, platformIcon, cookieLabel, nickForGroup,
       fmtNum, fmtDate,
     };
   }

@@ -102,6 +102,7 @@ body {
   border: 1px solid var(--hairline-soft);
 }
 .health-pill.warn { background: #fff8f0; border-color: #ffd43b; }
+.health-pill .hp-label { font-size: 12px; font-weight: 500; }
 .health-pill .hp-count { font-variant-numeric: tabular-nums; }
 .health-pill .hp-tag {
   font-size: 11px; padding: 1px 7px; border-radius: var(--rounded-full);
@@ -109,6 +110,20 @@ body {
 }
 .health-pill .hp-tag.fail { background: #ffe3e3; color: #e03131; }
 .health-pill .hp-tag.stale { background: #fff3bf; color: #e67700; }
+
+/* ── Pagination ───────────────────────────────────── */
+.pagination {
+  display: flex; justify-content: center; align-items: center; gap: var(--space-sm);
+  margin-top: var(--space-xl); padding-bottom: var(--space-xl);
+}
+.pagination button {
+  padding: 6px 14px; border: 1px solid var(--hairline);
+  border-radius: var(--rounded-sm); background: var(--canvas);
+  cursor: pointer; font-size: 14px; color: var(--ink);
+}
+.pagination button:disabled { opacity: 0.3; cursor: default; }
+.pagination button:not(:disabled):hover { background: var(--surface-soft); }
+.pagination .page-info { font-size: 13px; color: var(--muted); min-width: 60px; text-align: center; }
 
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
@@ -344,7 +359,7 @@ body {
   <!-- Platform Health -->
   <div class="health-bar" v-if="Object.keys(health).length">
     <span v-for="(h, p) in health" :key="p" class="health-pill" :class="{warn: h.failed > 0 || h.days_stale > 2}">
-      <span class="hp-icon">{{ p === 'douyin' ? '🎵' : p === 'kuaishou' ? '⚡' : p === 'xiaohongshu' ? '📕' : '📺' }}</span>
+      <span class="hp-label">{{ p === 'douyin' ? '抖音' : p === 'kuaishou' ? '快手' : p === 'xiaohongshu' ? '小红书' : '视频号' }}</span>
       <span class="hp-count"><b>{{ h.ok }}</b>/{{ h.total }}</span>
       <span v-if="h.failed > 0" class="hp-tag fail">⚠{{ h.failed }}</span>
       <span v-if="h.days_stale > 2" class="hp-tag stale">📅 {{ h.days_stale }}d</span>
@@ -418,7 +433,7 @@ body {
 
   <!-- Card Grid -->
   <div v-else class="card-grid">
-    <a v-for="v in filteredVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
+    <a v-for="v in paginatedVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
       <div class="card">
         <div class="card-cover" v-if="v.cover_url">
           <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="onCoverError">
@@ -439,6 +454,15 @@ body {
         <div class="card-time">🕐 {{ publishTime(v) }} <span class="trend-btn" @click.prevent.stop="showTrend(v)">📈 趋势</span></div>
       </div>
     </a>
+  </div>
+
+  <!-- Pagination -->
+  <div v-if="totalPages > 1" class="pagination">
+    <button @click="currentPage=1" :disabled="currentPage===1">««</button>
+    <button @click="currentPage--" :disabled="currentPage===1">«</button>
+    <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+    <button @click="currentPage++" :disabled="currentPage===totalPages">»</button>
+    <button @click="currentPage=totalPages" :disabled="currentPage===totalPages">»»</button>
   </div>
 
   <!-- Login Modal (inside #app so Vue can control it) -->
@@ -539,6 +563,8 @@ createApp({
     const relogining = ref(false);
     const reloginMsg = ref('');
     const health = ref({});
+    const currentPage = ref(1);
+    const pageSize = ref(24);
     let collectTimer = null;
     let timer = null;
 
@@ -698,6 +724,17 @@ createApp({
         return dir * ((a[sortBy.value] || 0) - (b[sortBy.value] || 0));
       });
       return list;
+    });
+
+    const totalPages = computed(() => Math.ceil(filteredVideos.value.length / pageSize.value) || 1);
+    const paginatedVideos = computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value;
+      return filteredVideos.value.slice(start, start + pageSize.value);
+    });
+
+    // 筛选条件变化时重置到第 1 页
+    watch([tab, searchQuery, accountFilter, dateFrom, dateTo], () => {
+      currentPage.value = 1;
     });
 
     async function refreshData() {
@@ -925,6 +962,7 @@ createApp({
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
       loading, refreshInterval, collecting, collectProgress, collectResults, relogining, reloginMsg,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
+      paginatedVideos, totalPages, currentPage, pageSize,
       platformLabel, accountLabel, accountIdMap, openAccount, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect, relogin,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
