@@ -78,6 +78,10 @@ body {
 .profile-info .subtitle { font-size: 14px; color: var(--muted); }
 .profile-info .stats-updated { font-size: 12px; color: var(--muted-soft); margin-top: var(--space-xs); }
 
+.cookie-chip { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: var(--rounded-full); margin-left: var(--space-sm); }
+.cookie-chip.ok { background: #dcfce7; color: #166534; }
+.cookie-chip.failed { background: #fee2e2; color: #991b1b; }
+
 /* Mega Stats */
 .mega-stats {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-base);
@@ -191,7 +195,8 @@ body {
       <span v-if="collecting" class="spinner-sm"></span>
       <span v-else>📊</span> 采集账号统计
     </button>
-    <a href="/accounts.html" class="back-link">← 返回账号列表</a>
+    <a href="/" class="back-link" style="margin-left:auto;">← 返回首页</a>
+    <a href="/accounts.html" class="back-link">账号列表</a>
     <a :href="'/api/export/videos?account_id=' + accountId" style="margin-left:12px;font-size:12px;color:var(--muted);text-decoration:none;opacity:0.5;" title="导出此账号视频CSV">📥 导出视频</a>
   </nav>
 
@@ -208,6 +213,7 @@ body {
         <h1>{{ accountName }}</h1>
         <div class="subtitle">
           关联 {{ platformLabels }} 共 {{ data.related_accounts.length }} 个平台账号
+          <span v-if="data.account.cookie_status" class="cookie-chip" :class="data.account.cookie_status">{{ data.account.cookie_status === 'ok' ? '✅' : '⚠️' }} Cookie {{ data.account.cookie_status === 'ok' ? '正常' : '已失效' }}</span>
         </div>
         <div class="profile-bio" v-if="data.account.profile_bio" style="margin-top:var(--space-sm);font-size:14px;color:var(--body);line-height:1.5;">
           {{ data.account.profile_bio }}

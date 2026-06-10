@@ -136,8 +136,27 @@ body {
   display: flex; flex-direction: column; justify-content: center;
   min-height: 80px;
 }
-.stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--ink); }
-.stat-card .stat-label { font-size: 14px; color: var(--muted); margin-top: var(--space-xs); }
+.stat-card .stat-value { font-size: 20px; font-weight: 700; }
+.stat-card .stat-label { font-size: 11px; color: var(--muted-soft); margin-bottom: 2px; }
+.stat-delta { font-size: 11px; margin-top: 2px; }
+.stat-delta.up { color: #22c55e; }
+.stat-delta.down { color: #ef4444; }
+
+/* Sort Bar */
+.sort-bar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-base); }
+.sort-label { font-size: 13px; color: var(--muted); }
+.sort-select { padding: 4px 10px; border: 1px solid var(--hairline); border-radius: var(--rounded-sm); font-size: 13px; background: var(--canvas); }
+.sort-count { font-size: 12px; color: var(--muted-soft); margin-left: auto; }
+
+/* Quick Date */
+.quick-date { font-size: 11px; padding: 2px 8px; border-radius: var(--rounded-full); cursor: pointer; background: var(--surface-soft); color: var(--muted); }
+.quick-date.active { background: var(--ink); color: #fff; }
+.quick-date:hover:not(.active) { background: var(--hairline-soft); }
+
+/* Card Delta */
+.card-delta { font-size: 10px; margin-left: 2px; font-weight: 600; }
+.card-delta.up { color: #22c55e; }
+.card-delta.down { color: #ef4444; }
 
 /* ── Search Bar ──────────────────────────────────── */
 .search-bar {
@@ -372,7 +391,7 @@ body {
     <div class="stat-card"><div class="stat-value">{{ stats.accounts }}</div><div class="stat-label">账号</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.videos }}</div><div class="stat-label">视频</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.snapshots }}</div><div class="stat-label">快照</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div><div class="stat-delta" :class="{up: stats.playDelta>0, down: stats.playDelta<0}">{{ stats.playDelta > 0 ? '↑' : stats.playDelta < 0 ? '↓' : '' }}{{ fmtDelta(stats.playDelta) }}</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.yesterdayViews }}</div><div class="stat-label">昨日播放</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.lastCollect }}</div><div class="stat-label">上次采集</div></div>
   </div>
@@ -391,25 +410,27 @@ body {
       <div class="label">到</div>
       <input type="date" v-model="dateTo" class="value" style="border:none;outline:none;width:100%;background:transparent;font-family:var(--font);font-size:14px;cursor:pointer;">
     </div>
-    <div class="search-field">
-      <div class="label">排序</div>
-      <select v-model="sortBy" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--font);">
-        <option value="play_count">播放量</option>
-        <option value="digg_count">点赞数</option>
-        <option value="comment_count">评论数</option>
-        <option value="first_seen">发布时间</option>
-      </select>
+    <div class="search-field" style="display:flex;align-items:center;gap:4px;">
+      <span class="quick-date" :class="{active: quickDate==='3d'}" @click="setQuickDate('3d')">3天</span>
+      <span class="quick-date" :class="{active: quickDate==='7d'}" @click="setQuickDate('7d')">7天</span>
+      <span class="quick-date" :class="{active: quickDate==='30d'}" @click="setQuickDate('30d')">30天</span>
     </div>
-    <div class="search-field">
-      <div class="label">顺序</div>
-      <select v-model="sortOrder" style="border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--font);">
-        <option value="desc">降序</option>
-        <option value="asc">升序</option>
-      </select>
-    </div>
-    <button class="search-btn" @click="refreshData">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-    </button>
+  </div>
+
+  <!-- Sort Bar -->
+  <div class="sort-bar">
+    <span class="sort-label">排序: </span>
+    <select v-model="sortBy" class="sort-select">
+      <option value="play_count">播放量</option>
+      <option value="digg_count">点赞数</option>
+      <option value="comment_count">评论数</option>
+      <option value="first_seen">发布时间</option>
+    </select>
+    <select v-model="sortOrder" class="sort-select">
+      <option value="desc">降序</option>
+      <option value="asc">升序</option>
+    </select>
+    <span class="sort-count">{{ filteredVideos.length }} 条结果</span>
   </div>
 
   <!-- Filter Strip -->
@@ -446,7 +467,7 @@ body {
         <div class="card-body">
           <div class="video-title">{{ v.title || '(无标题)' }}</div>
           <div class="card-stats">
-            <div class="stat-item"><div class="num">{{ v.play_count }}</div><div class="label">播放</div></div>
+            <div class="stat-item"><div class="num">{{ v.play_count }}<span v-if="v.play_delta" class="card-delta" :class="{up: v.play_delta>0, down: v.play_delta<0}">{{ v.play_delta>0 ? '↑' : '↓' }}{{ fmtDelta(v.play_delta) }}</span></div><div class="label">播放</div></div>
             <div class="stat-item"><div class="num">{{ v.digg_count }}</div><div class="label">点赞</div></div>
             <div class="stat-item"><div class="num">{{ v.comment_count }}</div><div class="label">评论</div></div>
             <div class="stat-item"><div class="num">{{ v.share_count }}</div><div class="label">分享</div></div>
@@ -550,6 +571,7 @@ createApp({
     const sortBy = ref('first_seen');
     const sortOrder = ref('desc');
     const accountFilter = ref('');
+    const quickDate = ref('');
     const loading = ref(false);
     const refreshInterval = ref(0);
     const showLoginModal = ref(false);
@@ -592,6 +614,7 @@ createApp({
         lastCollect: latest ? latest.collected_at.slice(5, 16) : '-',
         totalViews: totalViews.toLocaleString(),
         yesterdayViews: yesterdayViews.toLocaleString(),
+        playDelta: filtered.reduce((sum, x) => sum + (x.play_delta || 0), 0),
       };
     });
     const accounts = computed(() => [...new Set(data.value.accounts.map(a => a.account_name))]);
@@ -946,6 +969,25 @@ createApp({
 
     function setTab(t) { tab.value = t; }
 
+    function setQuickDate(d) {
+      if (quickDate.value === d) { quickDate.value = ''; dateFrom.value = ''; dateTo.value = ''; return; }
+      quickDate.value = d;
+      const today = new Date();
+      const days = d === '3d' ? 3 : d === '7d' ? 7 : 30;
+      const from = new Date(today);
+      from.setDate(from.getDate() - days);
+      dateFrom.value = from.toISOString().slice(0, 10);
+      dateTo.value = today.toISOString().slice(0, 10);
+    }
+
+    function fmtDelta(n) {
+      if (!n) return '';
+      const abs = Math.abs(n);
+      if (abs >= 10000) return (abs/10000).toFixed(1)+'w';
+      if (abs >= 1000) return (abs/1000).toFixed(1)+'k';
+      return abs.toString();
+    }
+
     function setAutoRefresh() {
       if (timer) clearInterval(timer);
       if (refreshInterval.value > 0) {
@@ -960,12 +1002,12 @@ createApp({
     });
 
     return {
-      tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter,
+      tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter, quickDate,
       loading, refreshInterval, collecting, collectProgress, collectResults, relogining, reloginMsg,
       data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
       paginatedVideos, totalPages, currentPage, pageSize,
       platformLabel, accountLabel, accountIdMap, openAccount, publishTime, proxyImage, onCoverError,
-      refreshData, setTab, setAutoRefresh, triggerCollect, relogin,
+      refreshData, setTab, setAutoRefresh, triggerCollect, relogin, setQuickDate, fmtDelta,
       showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
       showTrendModal, trendLoading, trendMeta, trendPoints,

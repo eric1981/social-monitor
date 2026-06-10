@@ -105,10 +105,14 @@ def query_data():
         if yesterday_play is not None and day_before_play is not None:
             v['yesterday_views'] = yesterday_play - day_before_play
         elif yesterday_play is not None:
-            # 昨天有数据但前天没有（新视频），昨日播放 = 昨天首次采集到的播放量
             v['yesterday_views'] = yesterday_play
         else:
             v['yesterday_views'] = 0
+        # 今日增量 = 最新播放 - 昨日最后播放
+        if yesterday_play is not None:
+            v['play_delta'] = today_play - yesterday_play
+        else:
+            v['play_delta'] = 0
         v['nickname'] = nickname_map.get(v['account_name'], v['account_name'])
         v['url'] = v.get('url') or build_url(v)
         videos.append(v)
