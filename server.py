@@ -423,7 +423,12 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 req = urllib.request.Request(url, headers={
                     'Referer': 'https://www.kuaishou.com/',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    'Accept-Language': 'zh-CN,zh;q=0.9',
+                    'Sec-Fetch-Dest': 'image',
+                    'Sec-Fetch-Mode': 'no-cors',
+                    'Sec-Fetch-Site': 'cross-site',
                 })
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     data = resp.read()
@@ -435,7 +440,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             except Exception as e:
-                self.send_error(502, str(e))
+                # 返回透明占位图，让前端 @error 能正常处理
+                placeholder = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n\xe2\xe2\x00\x00\x00\x00IEND\xaeB`\x82'
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Cache-Control', 'no-cache')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(placeholder)
 
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')

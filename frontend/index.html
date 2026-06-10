@@ -437,7 +437,7 @@ body {
     <a v-for="v in paginatedVideos" :key="v.aweme_id" :href="v.url || '#'" target="_blank" rel="noopener" class="card-link">
       <div class="card">
         <div class="card-cover" v-if="v.cover_url">
-          <img :src="proxyImage(v.cover_url)" alt="" loading="lazy" referrerpolicy="no-referrer" @error="onCoverError">
+          <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous" @error="onCoverError">
         </div>
         <div class="card-header">
           <span class="platform-badge" v-html="platformLabel(v.platform)"></span>

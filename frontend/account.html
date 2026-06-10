@@ -284,7 +284,7 @@ body {
          style="text-decoration:none;color:inherit;display:block">
         <div class="card">
           <div class="card-cover" v-if="v.cover_url">
-            <img :src="proxyImageUrl(v.cover_url)" alt="" loading="lazy" referrerpolicy="no-referrer"
+            <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous"
                  @error="e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<span style=font-size:32px;opacity:0.3>📹</span>'; }">
           </div>
           <div class="card-header">
