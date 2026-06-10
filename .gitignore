@@ -40,3 +40,4 @@ tmp/
 logs/
 *:Zone.Identifier
 collect_status.json
+collect_status.json
