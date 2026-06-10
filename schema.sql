@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS videos (
     title        TEXT,                  -- 标题
     duration     INTEGER,              -- 时长（秒）
     url          TEXT,                  -- 播放地址
+    cover_url    TEXT DEFAULT '',       -- 封面图URL
     first_seen   DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_deleted   INTEGER DEFAULT 0,
     UNIQUE(platform, aweme_id)

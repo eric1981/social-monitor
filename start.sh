@@ -1,16 +1,20 @@
 #!/bin/bash
-# 启动 Social Monitor — 前端 + 后端
+# Social Monitor — 启动脚本
 # 用法: ./start.sh
+
+cd "$(dirname "$0")"
+
+# Python 检测
+PYTHON=""
+for p in python3 .venv/bin/python3 python; do
+    if command -v $p &>/dev/null; then PYTHON=$p; break; fi
+done
+if [ -z "$PYTHON" ]; then echo "ERROR: Python3 not found"; exit 1; fi
 
 echo "=============================="
 echo "  Social Monitor 启动"
+echo "  $PYTHON server.py → :5408"
 echo "=============================="
-
-# 1. 启动后端 API 服务（前台，按 Ctrl+C 停止）
-echo "[1/1] 启动 API 服务 → http://localhost:5408"
-echo "      前端页面: http://localhost:5408"
-echo "      按 Ctrl+C 停止"
 echo ""
 
-cd "$(dirname "$0")"
-.venv/bin/python3 server.py
+exec $PYTHON server.py

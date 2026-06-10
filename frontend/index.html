@@ -370,7 +370,7 @@ body {
       <span class="cl-nickname">{{ r.nickname }}</span>
       <span v-if="r.status === 'ok'" class="cl-info">{{ r.message }}</span>
       <span v-if="r.status === 'error'" class="cl-msg">{{ r.message }}</span>
-      <span v-if="r.status === 'error' && r.platform === 'douyin'" class="cl-relogin" @click="relogin(r.platform, r.account)" v-show="!relogining">🔄 扫码</span>
+      <span v-if="r.status === 'error'" class="cl-relogin" @click="relogin(r.platform, r.account)" v-show="!relogining">🔄 扫码</span>
     </div>
     <div v-if="collectResults.length === 0" class="cl-row"><pre>{{ collectProgress }}</pre></div>
     <div v-if="relogining" class="cl-row cl-relogin-progress">{{ reloginMsg }}</div>
@@ -392,7 +392,7 @@ body {
     <div class="stat-card"><div class="stat-value">{{ stats.videos }}</div><div class="stat-label">视频</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.snapshots }}</div><div class="stat-label">快照</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div><div class="stat-delta" :class="{up: stats.playDelta>0, down: stats.playDelta<0}">{{ stats.playDelta > 0 ? '↑' : stats.playDelta < 0 ? '↓' : '' }}{{ fmtDelta(stats.playDelta) }}</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.yesterdayViews }}</div><div class="stat-label">昨日播放</div></div>
+    <div class="stat-card"><div class="stat-value">{{ stats.yesterdayViews }}</div><div class="stat-label">昨日增量</div></div>
     <div class="stat-card"><div class="stat-value">{{ stats.lastCollect }}</div><div class="stat-label">上次采集</div></div>
   </div>
 

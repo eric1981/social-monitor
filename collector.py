@@ -541,11 +541,22 @@ def collect_platform(conn, platform: str, accounts):
             conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('ok', acct['id']))
             conn.commit()
         except Exception as e:
-            err_msg = str(e)[:100]
-            _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'error', 'message': err_msg})
-            conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('failed', acct['id']))
-            conn.commit()
-            print(f"  [错误] {platform}/{acct['account_name']}: {e}", flush=True)
+            # 自动重试一次
+            import time
+            print(f"  [重试] {nick} — 失败: {str(e)[:60]}，3秒后重试...", flush=True)
+            time.sleep(3)
+            try:
+                collector(conn, acct)
+                _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'ok'})
+                conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('ok', acct['id']))
+                conn.commit()
+                print(f"  [重试] {nick} — 重试成功", flush=True)
+            except Exception as e2:
+                err_msg = str(e2)[:100]
+                _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'error', 'message': err_msg})
+                conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('failed', acct['id']))
+                conn.commit()
+                print(f"  [错误] {platform}/{acct['account_name']}: {e2}", flush=True)
 
 
 def write_status(status, progress='', done=0, total=0, results=None):

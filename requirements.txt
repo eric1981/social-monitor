@@ -1,9 +1,6 @@
 # Social Monitor — WSL 侧依赖
-# 运行 python3 server.py 使用
+# 运行 python3 server.py / collector.py 使用
 #
-# 注意：Windows 侧采集脚本 (win_collector.py 等) 需要额外安装：
+# Windows 侧采集脚本需要额外安装：
 #   pip install playwright  # 或 patchright
 #   playwright install chromium
-#
-flask>=3.0
-flask-cors>=4.0

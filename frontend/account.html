@@ -285,7 +285,7 @@ body {
     <!-- Videos -->
     <div v-if="displayVideos.length === 0" class="empty">暂无视频数据</div>
     <div v-else class="card-grid">
-      <a v-for="v in displayVideos" :key="v.aweme_id"
+      <a v-for="v in paginatedVideos" :key="v.aweme_id"
          :href="v.url || '#'" target="_blank" rel="noopener"
          style="text-decoration:none;color:inherit;display:block">
         <div class="card">
@@ -309,6 +309,15 @@ body {
         </div>
       </a>
     </div>
+
+    <!-- Video Pagination -->
+    <div v-if="totalVidPages > 1" class="pagination" style="margin-top:var(--space-xl);">
+      <button @click="vidPage=1" :disabled="vidPage===1">««</button>
+      <button @click="vidPage--" :disabled="vidPage===1">«</button>
+      <span class="page-info">{{ vidPage }} / {{ totalVidPages }}</span>
+      <button @click="vidPage++" :disabled="vidPage===totalVidPages">»</button>
+      <button @click="vidPage=totalVidPages" :disabled="vidPage===totalVidPages">»»</button>
+    </div>
   </template>
 
   <div v-else class="empty" style="padding:80px 0">
@@ -320,7 +329,7 @@ body {
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 createApp({
   setup() {
@@ -329,6 +338,8 @@ createApp({
     const currentTab = ref('all');
     const collecting = ref(false);
     const growthPoints = ref([]);
+    const vidPage = ref(1);
+    const vidPageSize = 12;
     let growthChart = null;
 
     // 从 URL 获取账号 ID: /account.html?id=1
@@ -356,6 +367,14 @@ createApp({
       if (currentTab.value === 'all') return data.value.videos;
       return platformData.value.videos || [];
     });
+
+    const totalVidPages = computed(() => Math.ceil(displayVideos.value.length / vidPageSize) || 1);
+    const paginatedVideos = computed(() => {
+      const start = (vidPage.value - 1) * vidPageSize;
+      return displayVideos.value.slice(start, start + vidPageSize);
+    });
+
+    watch(currentTab, () => { vidPage.value = 1; });
 
     function platformLabel(p) {
       const labels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
@@ -474,6 +493,7 @@ createApp({
       data, loading, currentTab, collecting,
       accountId, accountName, platformLabels,
       platformData, displayVideos, growthPoints,
+      vidPage, vidPageSize, totalVidPages, paginatedVideos,
       platformLabel, platformIcon, fmtNum, fmtTime,
       collectStats, fetchData, proxyImageUrl,
     };

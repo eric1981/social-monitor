@@ -315,6 +315,7 @@ body {
             📅 {{ fmtDate(a.account_stats_updated) }}
           </span>
           <span class="updated-at" v-else>—</span>
+          <span v-if="a.cookie_status === 'failed'" style="font-size:11px;color:var(--primary);cursor:pointer;margin-left:8px;" @click.prevent="window.open('/','_self')">🔄 登录</span>
           <span class="view-hint">查看详情 →</span>
         </div>
       </a>
