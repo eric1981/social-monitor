@@ -325,6 +325,7 @@ body {
       <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
       <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
       <a href="/accounts.html" style="margin-left:var(--space-sm);opacity:0.5;">👤 账号</a>
+      <a href="/api/export/videos" style="opacity:0.4;font-size:12px;text-decoration:none;margin-left:4px;" title="导出全部视频CSV">📥</a>
     </div>
     <div class="nav-right">
       <a @click="triggerCollect" style="cursor:pointer;position:relative;">

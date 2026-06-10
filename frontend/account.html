@@ -192,6 +192,7 @@ body {
       <span v-else>📊</span> 采集账号统计
     </button>
     <a href="/accounts.html" class="back-link">← 返回账号列表</a>
+    <a :href="'/api/export/videos?account_id=' + accountId" style="margin-left:12px;font-size:12px;color:var(--muted);text-decoration:none;opacity:0.5;" title="导出此账号视频CSV">📥 导出视频</a>
   </nav>
 
   <!-- Profile Header -->
@@ -237,6 +238,14 @@ body {
       <div class="mega-stat">
         <div class="stat-value">{{ data.summary.total_videos }}</div>
         <div class="stat-label">视频数</div>
+      </div>
+    </div>
+
+    <!-- Growth Chart -->
+    <div v-if="growthPoints.length" style="margin-bottom:var(--space-xl);background:var(--surface-soft);border-radius:var(--rounded-md);padding:var(--space-lg);">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📈 播放/点赞增长趋势</h3>
+      <div style="position:relative;height:240px;">
+        <canvas id="growthChart"></canvas>
       </div>
     </div>
 
@@ -303,6 +312,7 @@ body {
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const { createApp, ref, computed, onMounted } = Vue;
 
@@ -312,6 +322,8 @@ createApp({
     const loading = ref(true);
     const currentTab = ref('all');
     const collecting = ref(false);
+    const growthPoints = ref([]);
+    let growthChart = null;
 
     // 从 URL 获取账号 ID: /account.html?id=1
     const params = new URLSearchParams(window.location.search);
@@ -378,6 +390,8 @@ createApp({
         const resp = await fetch('/api/account/' + accountId);
         if (!resp.ok) { data.value = null; return; }
         data.value = await resp.json();
+        // 加载增长数据
+        loadGrowth();
       } catch (e) {
         console.error('Failed:', e);
         data.value = null;
@@ -391,7 +405,6 @@ createApp({
       collecting.value = true;
       try {
         await fetch('/api/collect/stats', { method: 'POST' });
-        // 等3秒后刷新
         await new Promise(r => setTimeout(r, 3000));
         await fetchData();
       } catch (e) {
@@ -399,6 +412,43 @@ createApp({
       } finally {
         collecting.value = false;
       }
+    }
+
+    async function loadGrowth() {
+      if (!accountId) return;
+      try {
+        const resp = await fetch('/api/account/' + accountId + '/growth');
+        const d = await resp.json();
+        growthPoints.value = d.points || [];
+        await new Promise(r => setTimeout(r, 200));
+        renderGrowthChart();
+      } catch(e) {}
+    }
+
+    function renderGrowthChart() {
+      const pts = growthPoints.value;
+      if (!pts.length) return;
+      const canvas = document.getElementById('growthChart');
+      if (!canvas) return;
+      if (growthChart) growthChart.destroy();
+      growthChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: pts.map(p => p.date.slice(5)),
+          datasets: [
+            { label: '播放', data: pts.map(p => p.play), borderColor: '#ff385c', backgroundColor: 'rgba(255,56,92,0.06)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: '点赞', data: pts.map(p => p.digg), borderColor: '#428bff', backgroundColor: 'rgba(66,139,255,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4,4] },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 12 } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 11 } } },
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
     }
 
     onMounted(() => {
@@ -412,7 +462,7 @@ createApp({
     return {
       data, loading, currentTab, collecting,
       accountId, accountName, platformLabels,
-      platformData, displayVideos,
+      platformData, displayVideos, growthPoints,
       platformLabel, platformIcon, fmtNum, fmtTime,
       collectStats, fetchData,
     };

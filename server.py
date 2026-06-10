@@ -210,11 +210,38 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
 
         elif parsed.path.startswith('/api/account/'):
-            # GET /api/account/<id>  — 账号详情，全平台汇总 + 分平台数据
             try:
                 parts = parsed.path.split('/')
                 account_id = parts[3] if len(parts) >= 4 else ''
-                platform_filter = parts[4] if len(parts) >= 5 else None  # 可选: /api/account/<id>/douyin
+                platform_filter = parts[4] if len(parts) >= 5 else None
+
+                # /api/account/<id>/growth — 账号播放/点赞增长曲线
+                if platform_filter == 'growth':
+                    conn = get_db()
+                    account = conn.execute('SELECT * FROM accounts WHERE id=?', (account_id,)).fetchone()
+                    if not account:
+                        json_response(self, {'error': '账号不存在'}, 404)
+                        conn.close()
+                        return
+                    related = conn.execute(
+                        'SELECT id FROM accounts WHERE account_name=?',
+                        (account['account_name'],)
+                    ).fetchall()
+                    related_ids = [r['id'] for r in related]
+                    placeholders = ','.join('?' * len(related_ids))
+                    rows = conn.execute(f"""
+                        SELECT DATE(s.collected_at) as d,
+                               SUM(s.play_count) as total_play, SUM(s.digg_count) as total_digg,
+                               SUM(s.comment_count) as total_comment
+                        FROM snapshots s JOIN videos v ON s.video_id=v.id
+                        WHERE v.account_id IN ({placeholders})
+                        GROUP BY DATE(s.collected_at) ORDER BY d
+                    """, related_ids).fetchall()
+                    conn.close()
+                    points = [{'date': r['d'], 'play': r['total_play'], 'digg': r['total_digg'],
+                               'comment': r['total_comment']} for r in rows]
+                    json_response(self, {'points': points})
+                    return
 
                 conn = get_db()
 
@@ -342,6 +369,49 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, {'meta': meta, 'points': points})
             except Exception as e:
                 json_response(self, {'error': str(e)}, 500)
+
+        elif parsed.path == '/api/export/accounts':
+            conn = get_db()
+            rows = conn.execute("""SELECT platform, account_name, nickname, cookie_status,
+                follower_count, total_digg_count, total_play_count, account_stats_updated
+                FROM accounts WHERE is_active=1 ORDER BY platform, id""").fetchall()
+            conn.close()
+            csv = '平台,账号名,昵称,Cookie状态,粉丝,获赞,播放,统计更新时间\n'
+            for r in rows:
+                csv += f'{r["platform"]},{r["account_name"]},{r["nickname"] or ""},{r["cookie_status"]},{r["follower_count"] or 0},{r["total_digg_count"] or 0},{r["total_play_count"] or 0},{r["account_stats_updated"] or ""}\n'
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/csv; charset=utf-8-sig')
+            self.send_header('Content-Disposition', 'attachment; filename=social-monitor-accounts.csv')
+            self.end_headers()
+            self.wfile.write(csv.encode('utf-8-sig'))
+
+        elif parsed.path == '/api/export/videos':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            account_id = qs.get('account_id', [None])[0]
+            conn = get_db()
+            if account_id:
+                rows = conn.execute("""SELECT v.platform, v.account_name, v.title, v.aweme_id, v.first_seen,
+                    s.play_count, s.digg_count, s.comment_count, s.share_count, s.collect_count, s.collected_at
+                    FROM videos v JOIN snapshots s ON s.video_id=v.id
+                    WHERE v.account_id=? AND s.collected_at=(SELECT MAX(s2.collected_at) FROM snapshots s2 WHERE s2.video_id=v.id)
+                    ORDER BY s.play_count DESC""", (account_id,)).fetchall()
+            else:
+                rows = conn.execute("""SELECT v.platform, v.account_name, v.title, v.aweme_id, v.first_seen,
+                    s.play_count, s.digg_count, s.comment_count, s.share_count, s.collect_count, s.collected_at
+                    FROM videos v JOIN snapshots s ON s.video_id=v.id
+                    WHERE s.collected_at=(SELECT MAX(s2.collected_at) FROM snapshots s2 WHERE s2.video_id=v.id)
+                    ORDER BY v.platform, s.play_count DESC""").fetchall()
+            conn.close()
+            csv = '平台,账号,标题,视频ID,发布时间,播放,点赞,评论,分享,收藏,采集时间\n'
+            for r in rows:
+                title = (r['title'] or '').replace(',', '，').replace('\n', ' ')
+                csv += f'{r["platform"]},{r["account_name"]},{title},{r["aweme_id"]},{r["first_seen"] or ""},{r["play_count"]},{r["digg_count"]},{r["comment_count"]},{r["share_count"]},{r["collect_count"]},{r["collected_at"]}\n'
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/csv; charset=utf-8-sig')
+            self.send_header('Content-Disposition', 'attachment; filename=social-monitor-videos.csv')
+            self.end_headers()
+            self.wfile.write(csv.encode('utf-8-sig'))
 
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
