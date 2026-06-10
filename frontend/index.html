@@ -90,6 +90,26 @@ body {
 .collect-log .cl-relogin:hover { color: #99ddff; }
 .collect-log .cl-relogin-progress { color: #ffd43b; font-size: 12px; padding: 4px 0; }
 
+/* ── Health Bar ───────────────────────────────────── */
+.health-bar {
+  display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+.health-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--rounded-full);
+  background: var(--surface-soft); font-size: 13px;
+  border: 1px solid var(--hairline-soft);
+}
+.health-pill.warn { background: #fff8f0; border-color: #ffd43b; }
+.health-pill .hp-count { font-variant-numeric: tabular-nums; }
+.health-pill .hp-tag {
+  font-size: 11px; padding: 1px 7px; border-radius: var(--rounded-full);
+  font-weight: 500;
+}
+.health-pill .hp-tag.fail { background: #ffe3e3; color: #e03131; }
+.health-pill .hp-tag.stale { background: #fff3bf; color: #e67700; }
+
 /* ── Stats Bar ───────────────────────────────────── */
 .stats-bar {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-base);
@@ -321,6 +341,16 @@ body {
     <div v-if="relogining" class="cl-row cl-relogin-progress">{{ reloginMsg }}</div>
   </div>
 
+  <!-- Platform Health -->
+  <div class="health-bar" v-if="Object.keys(health).length">
+    <span v-for="(h, p) in health" :key="p" class="health-pill" :class="{warn: h.failed > 0 || h.days_stale > 2}">
+      <span class="hp-icon">{{ p === 'douyin' ? '🎵' : p === 'kuaishou' ? '⚡' : p === 'xiaohongshu' ? '📕' : '📺' }}</span>
+      <span class="hp-count"><b>{{ h.ok }}</b>/{{ h.total }}</span>
+      <span v-if="h.failed > 0" class="hp-tag fail">⚠{{ h.failed }}</span>
+      <span v-if="h.days_stale > 2" class="hp-tag stale">📅 {{ h.days_stale }}d</span>
+    </span>
+  </div>
+
   <!-- Stats -->
   <div class="stats-bar">
     <div class="stat-card"><div class="stat-value">{{ stats.accounts }}</div><div class="stat-label">账号</div></div>
@@ -508,6 +538,7 @@ createApp({
     const collectResults = ref([]);
     const relogining = ref(false);
     const reloginMsg = ref('');
+    const health = ref({});
     let collectTimer = null;
     let timer = null;
 
@@ -675,11 +706,20 @@ createApp({
         const resp = await fetch('/api/data');
         const d = await resp.json();
         data.value = d;
+        // 同时拉取健康状态
+        fetchHealth();
       } catch (e) {
         console.error('Failed to fetch:', e);
       } finally {
         loading.value = false;
       }
+    }
+
+    async function fetchHealth() {
+      try {
+        const resp = await fetch('/api/health');
+        health.value = await resp.json();
+      } catch(e) {}
     }
 
     async function triggerCollect() {
@@ -878,6 +918,7 @@ createApp({
     onMounted(() => {
       console.log('SocialMonitor mounted, showLoginModal=', showLoginModal.value);
       refreshData();
+      fetchHealth();
     });
 
     return {
@@ -890,6 +931,7 @@ createApp({
       openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
       showTrendModal, trendLoading, trendMeta, trendPoints,
       showTrend, closeTrendModal, highlightPoint,
+      health, fetchHealth,
     };
   }
 }).mount('#app');

@@ -52,6 +52,26 @@ body {
 .top-nav .back-link { font-size: 14px; color: var(--legal-link); text-decoration: none; margin-left: auto; }
 .top-nav .back-link:hover { text-decoration: underline; }
 
+/* Comparison Table */
+.compare-section { margin-bottom: var(--space-xl); }
+.compare-table { border-radius: var(--rounded-md); overflow: hidden; border: 1px solid var(--hairline-soft); }
+.compare-row {
+  display: flex; align-items: center; padding: var(--space-sm) var(--space-base);
+  border-bottom: 1px solid var(--hairline-soft); gap: var(--space-md);
+}
+.compare-row:last-child { border-bottom: none; }
+.compare-name { font-weight: 600; font-size: 14px; min-width: 120px; }
+.compare-cells { display: flex; gap: var(--space-sm); flex: 1; }
+.compare-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 12px; border-radius: var(--rounded-sm); font-size: 12px;
+  background: var(--surface-soft); min-width: 72px;
+}
+.compare-cell.failed { opacity: 0.5; }
+.compare-cell .cc-platform { font-size: 16px; }
+.compare-cell .cc-followers { font-weight: 600; }
+.compare-cell .cc-plays { color: var(--muted-soft); font-size: 11px; }
+
 /* Page Header */
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -218,6 +238,23 @@ body {
       <span class="count-badge">{{ accounts.length }} 个账号</span>
     </div>
 
+    <!-- Cross-Platform Comparison -->
+    <div v-if="compareGroups.length" class="compare-section">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📊 跨平台对比</h3>
+      <div class="compare-table">
+        <div v-for="g in compareGroups" :key="g.account_name" class="compare-row">
+          <div class="compare-name">{{ g.account_name }}</div>
+          <div class="compare-cells">
+            <span v-for="(p, plat) in g.platforms" :key="plat" class="compare-cell" :class="p.cookie_status">
+              <span class="cc-platform">{{ plat === 'douyin' ? '🎵' : plat === 'kuaishou' ? '⚡' : plat === 'xiaohongshu' ? '📕' : '📺' }}</span>
+              <span class="cc-followers">{{ fmtNum(p.followers) }}</span>
+              <span class="cc-plays">{{ fmtNum(p.plays) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Cards Grid -->
     <div class="card-grid">
       <a v-for="a in accounts" :key="a.id"
@@ -298,6 +335,7 @@ createApp({
   setup() {
     const accounts = ref([]);
     const loading = ref(true);
+    const compareGroups = ref([]);
 
     const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
 
@@ -345,6 +383,8 @@ createApp({
         const resp = await fetch('/api/accounts');
         const d = await resp.json();
         accounts.value = d.accounts || [];
+        // 加载跨平台对比
+        loadCompare();
       } catch (e) {
         console.error('Failed:', e);
       } finally {
@@ -352,8 +392,16 @@ createApp({
       }
     });
 
+    async function loadCompare() {
+      try {
+        const resp = await fetch('/api/compare');
+        const d = await resp.json();
+        compareGroups.value = d.groups || [];
+      } catch(e) {}
+    }
+
     return {
-      accounts, loading,
+      accounts, loading, compareGroups,
       platformColor, platformIcon, cookieLabel,
       fmtNum, fmtDate,
     };

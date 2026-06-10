@@ -152,6 +152,51 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
             json_response(self, {'accounts': accounts})
 
+        elif parsed.path == '/api/health':
+            conn = get_db()
+            rows = conn.execute(
+                "SELECT platform, COUNT(*) as total, SUM(CASE WHEN cookie_status='ok' THEN 1 ELSE 0 END) as ok "
+                "FROM accounts WHERE is_active=1 GROUP BY platform"
+            ).fetchall()
+            # 数据断档检测：每个平台最近一次快照时间
+            stale = conn.execute("""
+                SELECT v.platform, MAX(s.collected_at) as last_snap,
+                       CAST(julianday('now') - julianday(MAX(s.collected_at)) AS INTEGER) as days_stale
+                FROM snapshots s JOIN videos v ON s.video_id=v.id
+                WHERE v.platform IN ('douyin','kuaishou','xiaohongshu','shipinhao')
+                GROUP BY v.platform
+            """).fetchall()
+            conn.close()
+            health = {}
+            for r in rows:
+                health[r['platform']] = {'total': r['total'], 'ok': r['ok'], 'failed': r['total'] - r['ok']}
+            for r in stale:
+                if r['platform'] in health:
+                    health[r['platform']]['last_snap'] = r['last_snap']
+                    health[r['platform']]['days_stale'] = r['days_stale']
+            json_response(self, health)
+
+        elif parsed.path == '/api/compare':
+            conn = get_db()
+            rows = conn.execute("""
+                SELECT account_name, platform, nickname, cookie_status,
+                       follower_count, total_digg_count, total_play_count
+                FROM accounts WHERE is_active=1
+                ORDER BY account_name, platform
+            """).fetchall()
+            conn.close()
+            groups = {}
+            for r in rows:
+                name = r['account_name']
+                if name not in groups:
+                    groups[name] = {'account_name': name, 'platforms': {}}
+                groups[name]['platforms'][r['platform']] = {
+                    'nickname': r['nickname'], 'cookie_status': r['cookie_status'],
+                    'followers': r['follower_count'], 'diggs': r['total_digg_count'],
+                    'plays': r['total_play_count']
+                }
+            json_response(self, {'groups': list(groups.values())})
+
         elif parsed.path == '/api/collect/stats':
             # 触发采集账号统计数据
             try:

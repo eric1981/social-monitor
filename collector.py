@@ -519,6 +519,22 @@ def collect_platform(conn, platform: str, accounts):
 
     for acct in accounts:
         nick = acct['nickname'] or acct['account_name']
+
+        # Cookie 文件预检：超过 30 天未更新则跳过
+        if platform in ('douyin', 'kuaishou', 'xiaohongshu'):
+            cookie_path = COOKIES_DIR / f"{platform}_{acct['account_name']}.json"
+            if cookie_path.exists():
+                age_days = (datetime.now().timestamp() - cookie_path.stat().st_mtime) / 86400
+                if age_days > 30:
+                    print(f"  [跳过] {nick} — cookie 文件 {age_days:.0f} 天未更新，可能已失效", flush=True)
+                    conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('failed', acct['id']))
+                    conn.commit()
+                    _COLLECT_RESULTS.append({
+                        'platform': platform, 'account': acct['account_name'], 'nickname': nick,
+                        'status': 'error', 'message': f'cookie 文件 {age_days:.0f} 天未更新'
+                    })
+                    continue
+
         try:
             collector(conn, acct)
             _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'ok'})
