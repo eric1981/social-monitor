@@ -413,12 +413,36 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(csv.encode('utf-8-sig'))
 
+        elif parsed.path.startswith('/proxy/image'):
+            from urllib.parse import parse_qs, unquote
+            qs = parse_qs(parsed.query)
+            url = qs.get('url', [''])[0]
+            if not url:
+                self.send_error(400, 'Missing url')
+                return
+            try:
+                req = urllib.request.Request(url, headers={
+                    'Referer': 'https://www.kuaishou.com/',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                })
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = resp.read()
+                    ct = resp.headers.get('Content-Type', 'image/jpeg')
+                self.send_response(200)
+                self.send_header('Content-Type', ct)
+                self.send_header('Cache-Control', 'public, max-age=86400')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self.send_error(502, str(e))
+
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
             if not filepath.exists() or not filepath.is_file():
                 filepath = FRONTEND_DIR / 'index.html'
 
-            ct_map = {'.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css'}
+            ct_map = {'.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml'}
             ct = ct_map.get(filepath.suffix, 'application/octet-stream')
 
             self.send_response(200)
