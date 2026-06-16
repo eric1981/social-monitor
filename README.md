@@ -39,7 +39,7 @@
 
 ```
 social-monitor/
-├── collector.py           # 采集入口（WSL，支持自动重试）
+├── collector.py           # 采集入口（跨平台）
 ├── server.py              # API + 静态文件服务 :5408
 ├── config.json            # 系统配置文件
 ├── config.py              # 配置加载模块
@@ -58,11 +58,22 @@ social-monitor/
     └── cookies/           # 各平台 cookie 文件
 ```
 
+## 安装
+
+```bash
+# Linux / macOS / WSL
+python3 install.py
+
+# Windows（双击 install.bat）
+install.bat
+```
+
+自动完成：Python 依赖 → Playwright + Chromium → 数据库初始化 → 目录创建。
+
 ## 启动
 
 ```bash
-cd ~/social-monitor
-./start.sh
+python3 server.py
 # → http://localhost:5408
 ```
 
