@@ -1,0 +1,11 @@
+# Cookie files (sensitive)
+social-auto-upload/
+cookies/
+
+# Python
+__pycache__/
+*.pyc
+
+# Temp
+tmp/
+*.log
