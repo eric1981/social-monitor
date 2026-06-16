@@ -1,43 +1,12 @@
-# 依赖
+# Cookie files (sensitive)
 social-auto-upload/
-.venv/
+cookies/
+
+# Python
 __pycache__/
 *.pyc
 
-# 数据库
-monitor.db
-
-# 系统
-.DS_Store
-Thumbs.db
-
-# 临时文件（Windows 侧采集中间结果）
+# Temp
 tmp/
-
-# cookie 缓存（各平台登录态）
-cookies/
-
-# 登录二维码
-*_qrcode_*.png
-*_login_*.png
-debug_*.png
-
-# 日志
-logs/
 *.log
-
-# 编辑器
-.vscode/
-.idea/
-*.swp
-*.swo
-*.pyc
-__pycache__/
-.venv/
 monitor.db
-cookies/
-tmp/
-logs/
-*:Zone.Identifier
-collect_status.json
-collect_status.json

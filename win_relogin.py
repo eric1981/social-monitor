@@ -7,10 +7,11 @@ import sys, asyncio, os, json, shutil
 
 platform = sys.argv[1] if len(sys.argv) > 1 else 'douyin'
 account_name = sys.argv[2] if len(sys.argv) > 2 else 'unknown'
-USERPROFILE = os.environ['USERPROFILE']
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
 
 # 使用桌面的 social-auto-upload 项目（完整，有 uploader 模块）
-sau_dir = os.path.join(USERPROFILE, 'Desktop', 'social-auto-upload')
+sau_dir = str(PROJECT_ROOT / 'social-auto-upload')
 os.chdir(sau_dir)
 sys.path.insert(0, sau_dir)
 
@@ -38,8 +39,7 @@ print(f"登录结果: {r}")
 # douyin_setup 返回 bool，True=成功
 if r:
     # 同步到 social-monitor 的 cookie 目录（WSL 侧也可访问）
-    monitor_cookie_dir = os.path.join(USERPROFILE, 'Desktop', 'social-monitor',
-                                       'social-auto-upload', 'cookies')
+    monitor_cookie_dir = str(COOKIES_DIR)
     os.makedirs(monitor_cookie_dir, exist_ok=True)
     dst = os.path.join(monitor_cookie_dir, f'{platform}_{account_name}.json')
     shutil.copy2(account_file, dst)

@@ -1,29 +1,38 @@
 """
-Social Monitor 配置模块
+Social Monitor 配置模块 — 跨平台（Windows / WSL / macOS / Linux）
 所有模块统一通过此文件读取配置，不再硬编码。
 """
 import json
+import platform
 import re
 from pathlib import Path
 
 _CONFIG_PATH = Path(__file__).parent / "config.json"
 
-# ── 默认值（当配置文件缺失或不完整时的回退） ──
+# ── 平台检测 ──
+_SYSTEM = platform.system()          # "Windows" | "Linux" | "Darwin"
+_IS_WSL = "microsoft" in platform.release().lower()
+
+
+def is_windows() -> bool:
+    return _SYSTEM == "Windows"
+
+
+def is_wsl() -> bool:
+    return _SYSTEM == "Linux" and _IS_WSL
+
+
+def is_macos() -> bool:
+    return _SYSTEM == "Darwin"
+
+
+def is_linux() -> bool:
+    return _SYSTEM == "Linux" and not _IS_WSL
+
+
+# ── 默认值 ──
 _DEFAULTS = {
     "server": {"port": 5408},
-    "windows": {
-        "base_dir": "C:\\Users\\NINGMEI\\Desktop\\social-monitor",
-        "wsl_mount_base": "/mnt/c/Users/NINGMEI/Desktop/social-monitor",
-        "scripts": {
-            "douyin": "win_collector.py",
-            "kuaishou": "win_kuaishou.py",
-            "xiaohongshu": "win_xiaohongshu.py",
-            "shipinhao": "win_shipinhao.py",
-            "login": "win_login.py",
-            "relogin": "win_relogin.py",
-            "stats": "win_collect_stats.py",
-        },
-    },
     "collect": {
         "cookie_max_age_days": 30,
         "timeout_seconds": 120,
@@ -63,7 +72,6 @@ _DEFAULTS = {
 
 
 def _deep_merge(base, overlay):
-    """递归合并 overlay 到 base（overlay 优先）"""
     for key, value in overlay.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
             _deep_merge(base[key], value)
@@ -73,8 +81,7 @@ def _deep_merge(base, overlay):
 
 
 def _load() -> dict:
-    """加载配置（含默认回退）"""
-    cfg = json.loads(json.dumps(_DEFAULTS))  # 深拷贝默认值
+    cfg = json.loads(json.dumps(_DEFAULTS))
     try:
         with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
             user_cfg = json.load(f)
@@ -84,18 +91,15 @@ def _load() -> dict:
     return cfg
 
 
-# ── 模块级缓存 ──
 _cfg = None
 
 
 def refresh():
-    """强制重新加载配置（写入配置后调用）"""
     global _cfg
     _cfg = _load()
 
 
 def get() -> dict:
-    """获取完整配置"""
     global _cfg
     if _cfg is None:
         _cfg = _load()
@@ -103,14 +107,10 @@ def get() -> dict:
 
 
 def save(new_config: dict) -> None:
-    """保存配置到文件（merge 模式：只更新提供的字段）"""
     current = get()
-    # 深度合并
     _deep_merge(current, new_config)
-    # 写入文件，保留格式
     with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(current, f, ensure_ascii=False, indent=2)
-    # 重新加载缓存
     _cfg = current
 
 
@@ -118,26 +118,6 @@ def save(new_config: dict) -> None:
 
 def server_port() -> int:
     return get()["server"]["port"]
-
-
-def windows_base_dir() -> str:
-    return get()["windows"]["base_dir"]
-
-
-def windows_wsl_base() -> str:
-    return get()["windows"]["wsl_mount_base"]
-
-
-def windows_script(name: str) -> str:
-    """获取 Windows 侧脚本完整路径 (C:\\...\\xxx.py)"""
-    base = windows_base_dir()
-    script = get()["windows"]["scripts"].get(name, name)
-    return rf"{base}\{script}"
-
-
-def wsl_path(rel: str) -> str:
-    """拼接 WSL 侧 mount 路径"""
-    return str(Path(windows_wsl_base()) / rel)
 
 
 def collect_cookie_max_age_days() -> int:
@@ -185,5 +165,4 @@ def image_proxy_allowed_domains() -> list:
 
 
 def image_proxy_allowed_patterns() -> list:
-    """返回编译好的正则表达式列表（用于 SSRF 检查）"""
     return [re.compile(p) for p in image_proxy_allowed_domains()]

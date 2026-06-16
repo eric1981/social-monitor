@@ -143,30 +143,6 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: var(--space-sm); }
     </div>
   </div>
 
-  <!-- Windows Integration -->
-  <div class="config-section">
-    <h2>🪟 Windows 集成</h2>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Windows 项目目录</label>
-        <input type="text" v-model="cfg.windows.base_dir">
-        <div class="hint">Windows 侧脚本所在根目录（C: 盘路径）</div>
-      </div>
-      <div class="form-group">
-        <label>WSL 挂载路径</label>
-        <input type="text" v-model="cfg.windows.wsl_mount_base">
-        <div class="hint">对应 /mnt/c/... 的 WSL 挂载点</div>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group" v-for="(_, name) in cfg.windows.scripts" style="max-width:160px">
-        <label>{{ name }}</label>
-        <input type="text" v-model="cfg.windows.scripts[name]">
-        <div class="hint">{{ scriptHints[name] || '' }}</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Collect -->
   <div class="config-section">
     <h2>📡 采集</h2>
@@ -256,7 +232,6 @@ createApp({
   setup() {
     const cfg = ref({
       server: { port: 5408 },
-      windows: { base_dir: '', wsl_mount_base: '', scripts: {} },
       collect: { cookie_max_age_days: 30, timeout_seconds: 120, retry_delay_seconds: 3 },
       schedule: { max_retries: 3, retry_delay_seconds: 3600, platforms: [] },
       snapshot_retention_days: 90,
@@ -267,12 +242,6 @@ createApp({
     const saving = ref(false);
     const statusMsg = ref('');
     const statusClass = ref('');
-
-    const scriptHints = {
-      douyin: '抖音采集脚本', kuaishou: '快手采集脚本',
-      xiaohongshu: '小红书采集脚本', shipinhao: '视频号采集脚本',
-      login: '扫码登录脚本', relogin: '重新登录脚本', stats: '账号统计脚本',
-    };
 
     function formatSeconds(s) {
       if (s < 60) return s + ' 秒';
@@ -293,10 +262,6 @@ createApp({
         const data = await resp.json();
         // 深度合并——保留未返回字段的默认值
         if (data.server) cfg.value.server = { ...cfg.value.server, ...data.server };
-        if (data.windows) {
-          cfg.value.windows = { ...cfg.value.windows, ...data.windows,
-            scripts: { ...cfg.value.windows.scripts, ...(data.windows.scripts || {}) } };
-        }
         if (data.collect) cfg.value.collect = { ...cfg.value.collect, ...data.collect };
         if (data.schedule) {
           cfg.value.schedule = { ...cfg.value.schedule, ...data.schedule,
@@ -345,7 +310,7 @@ createApp({
 
     return {
       cfg, platformsStr, domainsStr, saving, statusMsg, statusClass,
-      scriptHints, formatSeconds, syncPlatforms, syncDomains, saveConfig,
+      formatSeconds, syncPlatforms, syncDomains, saveConfig,
     };
   }
 }).mount('#app');

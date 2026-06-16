@@ -2,19 +2,6 @@
   "server": {
     "port": 5408
   },
-  "windows": {
-    "base_dir": "C:\\Users\\NINGMEI\\Desktop\\social-monitor",
-    "wsl_mount_base": "/mnt/c/Users/NINGMEI/Desktop/social-monitor",
-    "scripts": {
-      "douyin": "win_collector.py",
-      "kuaishou": "win_kuaishou.py",
-      "xiaohongshu": "win_xiaohongshu.py",
-      "shipinhao": "win_shipinhao.py",
-      "login": "win_login.py",
-      "relogin": "win_relogin.py",
-      "stats": "win_collect_stats.py"
-    }
-  },
   "collect": {
     "cookie_max_age_days": 30,
     "timeout_seconds": 120,
@@ -23,12 +10,7 @@
   "schedule": {
     "max_retries": 3,
     "retry_delay_seconds": 3600,
-    "platforms": [
-      "douyin",
-      "kuaishou",
-      "xiaohongshu",
-      "shipinhao"
-    ]
+    "platforms": ["douyin", "kuaishou", "xiaohongshu", "shipinhao"]
   },
   "snapshot_retention_days": 90,
   "image_proxy": {

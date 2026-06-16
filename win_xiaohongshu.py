@@ -14,15 +14,19 @@ except ImportError:
     except ImportError:
         print("ERROR: Need playwright or patchright"); sys.exit(1)
 
-USERPROFILE = os.environ['USERPROFILE']
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+TMP_DIR = PROJECT_ROOT / 'tmp'
 
 def find_cookie(account_name):
-    for p in [
-        os.path.join(USERPROFILE, 'Desktop', 'social-monitor', 'social-auto-upload', 'cookies', f'xiaohongshu_{account_name}.json'),
-        os.path.join(USERPROFILE, 'Desktop', 'social-auto-upload', 'cookies', f'xiaohongshu_{account_name}.json'),
-        os.path.join(USERPROFILE, 'social-auto-upload', 'cookies', f'xiaohongshu_{account_name}.json'),
-    ]:
-        if os.path.exists(p): return p
+    """在项目 cookies 目录查找 cookie 文件。"""
+    candidates = [
+        COOKIES_DIR / f"xiaohongshu_{account_name}.json",
+        COOKIES_DIR / f"xiaohongshu_uploader" / account_name,
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p)
     return None
 
 async def collect():
@@ -135,8 +139,8 @@ async def collect():
                 nickname = nick
 
             out_data = {'videos': result, 'nickname': nickname}
-            out_path = os.path.join(USERPROFILE, 'Desktop', 'social-monitor', 'tmp', f'xiaohongshu_{account_name}.json')
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            out_path = TMP_DIR / f'xiaohongshu_{account_name}.json'
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(out_data, f, ensure_ascii=False)
 

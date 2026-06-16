@@ -19,31 +19,22 @@ except ImportError:
     except ImportError:
         print("ERROR: Need playwright or patchright"); sys.exit(1)
 
-USERPROFILE = os.environ['USERPROFILE']
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+TMP_DIR = PROJECT_ROOT / 'tmp'
 
 
 def find_cookie(platform, account_name):
-    cookie_map = {
-        'douyin': f'douyin_{account_name}.json',
-        'kuaishou': f'kuaishou_{account_name}.json',
-        'xiaohongshu': f'xiaohongshu_{account_name}.json',
-        'shipinhao': None,
-    }
-    filename = cookie_map.get(platform)
-    if filename:
-        candidates = [
-            os.path.join(USERPROFILE, 'Desktop', 'social-monitor', 'social-auto-upload', 'cookies', filename),
-            os.path.join(USERPROFILE, 'Desktop', 'social-auto-upload', 'cookies', filename),
-            os.path.join(USERPROFILE, 'social-auto-upload', 'cookies', filename),
-        ]
-        for p in candidates:
-            if os.path.exists(p):
-                return p
-    elif platform == 'shipinhao':
-        p = os.path.join(USERPROFILE, 'Desktop', 'social-monitor',
-            'social-auto-upload', 'cookies', 'tencent_uploader', account_name)
-        if os.path.exists(p):
-            return p
+    """在项目 cookies 目录查找 cookie 文件。"""
+    filename = f"{platform}_{account_name}.json"
+    candidates = [
+        COOKIES_DIR / filename,
+        COOKIES_DIR / f"{platform}_uploader" / account_name,
+        COOKIES_DIR / "tencent_uploader" / account_name,
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p)
     return None
 
 
@@ -308,7 +299,7 @@ async def main():
     cookie_file = find_cookie(platform, account_name)
     if not cookie_file:
         print(f"ERROR: Cookie not found for {platform}/{account_name}", flush=True)
-        print(f"Searched in: {USERPROFILE}\\Desktop\\social-monitor\\social-auto-upload\\cookies\\", flush=True)
+        print(f"Searched in: {COOKIES_DIR}", flush=True)
         sys.exit(1)
 
     print(f"Cookie: {cookie_file}", flush=True)
@@ -339,8 +330,8 @@ async def main():
 
             # 写入输出文件
             out_file = f"stats_{platform}_{account_name}.json"
-            out_path = os.path.join(USERPROFILE, 'Desktop', 'social-monitor', 'tmp', out_file)
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            out_path = str(PROJECT_ROOT, 'tmp', out_file)
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(result, f, ensure_ascii=False)
 

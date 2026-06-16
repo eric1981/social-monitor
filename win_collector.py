@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import asyncio
+from pathlib import Path
 
 # ── 导入 playwright/patchright ──────────────────────
 try:
@@ -22,19 +23,21 @@ except ImportError:
         print("ERROR: Need playwright or patchright")
         sys.exit(1)
 
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / "social-auto-upload" / "cookies"
+TMP_DIR = PROJECT_ROOT / "tmp"
+
 
 def find_cookie(account_name):
-    """查找账号的 cookie 文件"""
+    """在项目 cookies 目录查找 cookie 文件（跨平台）。"""
     candidates = [
-        os.path.join(os.environ['USERPROFILE'], 'Desktop', 'social-monitor', 'social-auto-upload', 'cookies', f'douyin_{account_name}.json'),
-        os.path.join(os.environ['USERPROFILE'], 'Desktop', 'social-auto-upload', 'cookies', f'douyin_{account_name}.json'),
-        os.path.join(os.environ['USERPROFILE'], 'social-auto-upload', 'cookies', f'douyin_{account_name}.json'),
-        f'C:\\Users\\NINGMEI\\social-auto-upload\\cookies\\douyin_{account_name}.json',
+        COOKIES_DIR / f"douyin_{account_name}.json",
+        COOKIES_DIR / f"douyin_uploader" / account_name,
     ]
     for p in candidates:
-        if os.path.exists(p):
-            return p
-    return candidates[0]
+        if p.exists():
+            return str(p)
+    return str(candidates[0])
 
 
 async def collect():
@@ -102,11 +105,8 @@ async def collect():
                 await page.wait_for_timeout(300)
 
             # 写入输出文件
-            out_path = os.path.join(
-                os.environ['USERPROFILE'],
-                'Desktop', 'social-monitor', 'tmp', f'{account_name}.json'
-            )
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            out_path = TMP_DIR / f'{account_name}.json'
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
 
             # 提取账号昵称（从第一个视频的 author 或返回数据中）
             nickname = ''

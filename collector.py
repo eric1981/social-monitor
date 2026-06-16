@@ -1,42 +1,56 @@
 #!/usr/bin/env python3
 """
-Social Monitor — 评论区账号监控采集器
-基于 social-auto-upload 的 cookie 机制采集创作者后台数据。
-
-采集流程：
-  抖音 → 调用 Windows 侧 win_collector.py（Playwright 在 Windows 原生环境稳定运行）
-  其他平台 → 待开发
+Social Monitor — 跨平台采集器
+直接调用 Playwright 脚本采集创作者后台数据（Windows / macOS / Linux 通用）。
 
 用法：
   python3 collector.py                              # 采集所有活跃账号
   python3 collector.py --platform douyin             # 只采抖音
   python3 collector.py --account benxian1            # 只采某个账号
   python3 collector.py --dry-run                     # 预览不写入
+  python3 collector.py --stats-only                  # 仅采集账号统计
 """
 
 import argparse
+import hashlib
 import json
-import os
-import shutil
 import sqlite3
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
 import config
 
-# ── 路径 ──────────────────────────────────────────────
 MONITOR_DIR = Path(__file__).parent
 DB_PATH = MONITOR_DIR / "monitor.db"
 COOKIES_DIR = MONITOR_DIR / "social-auto-upload" / "cookies"
 SOCIAL_AUTO_UPLOAD_DIR = MONITOR_DIR / "social-auto-upload"
+TMP_DIR = MONITOR_DIR / "tmp"
 
-# Windows 侧 tmp 目录（WSL mount 路径）
-WIN_TMP_WSL = config.wsl_path("tmp")
+# 脚本名称映射（项目根目录下的脚本）
+COLLECTOR_SCRIPTS = {
+    "douyin": "win_collector.py",
+    "kuaishou": "win_kuaishou.py",
+    "xiaohongshu": "win_xiaohongshu.py",
+    "shipinhao": "win_shipinhao.py",
+    "stats": "win_collect_stats.py",
+}
+
+
+def run_script(platform_key: str, *args) -> subprocess.CompletedProcess:
+    """调用项目根目录下的采集脚本（跨平台）。"""
+    script = COLLECTOR_SCRIPTS.get(platform_key)
+    if not script:
+        raise ValueError(f"未知平台: {platform_key}")
+    script_path = MONITOR_DIR / script
+    cmd = [sys.executable, str(script_path)] + list(args)
+    return subprocess.run(cmd, capture_output=True, timeout=config.collect_timeout())
 
 
 # ── 数据库 ─────────────────────────────────────────────
+
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
@@ -105,40 +119,28 @@ def add_snapshot(conn, video_id, collected_at, play_count=0, digg_count=0,
     return True
 
 
-# ── 平台采集器 ─────────────────────────────────────────
+def _stderr_str(result):
+    """跨平台安全获取 stderr 文本。"""
+    try:
+        return result.stderr.decode('utf-8', errors='replace')[:500]
+    except Exception:
+        return str(result.stderr)[:500]
+
+
+# ── 抖音采集器 ─────────────────────────────────────────
 
 def collect_douyin(conn, account):
-    """
-    采集抖音账号的作品列表
-    通过 cmd.exe 调用 Windows 侧的 win_collector.py（Playwright 稳定运行）
-    """
     account_name = account['account_name']
     account_id = account['id']
 
     print(f"  [抖音] {account_name} — 开始采集...", flush=True)
 
-    # 同步 cookie 到 Windows 桌面（win_collector.py 需要 Windows 侧的文件）
-    src = COOKIES_DIR / f"douyin_{account_name}.json"
-    if src.exists():
-        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
-        win_cookies.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(src), str(win_cookies / f"douyin_{account_name}.json"))
-
-    # 调用 Windows 侧采集脚本
-    result = subprocess.run(
-        ['cmd.exe', '/c', 'python', config.windows_script('douyin'), account_name],
-        capture_output=True, text=False, timeout=config.collect_timeout()
-    )
+    result = run_script("douyin", account_name)
     if result.returncode != 0:
-        try:
-            err = result.stderr.decode('gbk', errors='replace')[:500]
-        except Exception:
-            err = str(result.stderr)[:500]
-        print(f"  [抖音] {account_name} — 采集失败: {err}", flush=True)
+        print(f"  [抖音] {account_name} — 采集失败: {_stderr_str(result)}", flush=True)
         return
 
-    # 读取结果文件
-    tmp_file = Path(WIN_TMP_WSL) / f"{account_name}.json"
+    tmp_file = TMP_DIR / f"{account_name}.json"
     if not tmp_file.exists():
         print(f"  [抖音] {account_name} — 未生成结果文件", flush=True)
         return
@@ -146,7 +148,6 @@ def collect_douyin(conn, account):
     with open(str(tmp_file), 'r', encoding='utf-8') as f:
         result_data = json.load(f)
 
-    # 新格式: {videos: [...], nickname: '...'} 或旧格式: [...]（兼容旧数据）
     if isinstance(result_data, dict):
         videos = result_data.get('videos', [])
         nickname = result_data.get('nickname', '')
@@ -158,12 +159,8 @@ def collect_douyin(conn, account):
         print(f"  [抖音] {account_name} — 无视频数据", flush=True)
         raise Exception("无视频数据，可能cookie失效")
 
-    # 自动更新昵称
     if nickname and nickname != account['nickname']:
-        conn.execute(
-            'UPDATE accounts SET nickname=? WHERE id=?',
-            (nickname, account_id)
-        )
+        conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
         print(f"  [抖音] {account_name} — 更新昵称: {nickname}", flush=True)
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M:00')
@@ -174,19 +171,16 @@ def collect_douyin(conn, account):
         aweme_id = v.get('aweme_id', '')
         if not aweme_id:
             continue
-
         title = v.get('desc', '')
         duration = v.get('duration', 0)
         if isinstance(duration, (int, float)) and duration > 0:
             duration = round(duration / 1000)
-
         create_time = v.get('create_time', 0)
         if create_time:
             try:
                 create_time = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
             except (OSError, ValueError):
                 create_time = None
-
         video_id, is_new = ensure_video(
             conn, account_id, 'douyin', account_name,
             aweme_id, title, duration,
@@ -195,7 +189,6 @@ def collect_douyin(conn, account):
         )
         if is_new:
             new_count += 1
-
         added = add_snapshot(
             conn, video_id, now,
             play_count=v.get('play_count', 0),
@@ -215,34 +208,17 @@ def collect_douyin(conn, account):
 # ── 快手采集器 ─────────────────────────────────────────
 
 def collect_kuaishou(conn, account):
-    """采集快手账号的作品列表 — 调用 Windows 侧 win_kuaishou.py"""
     account_name = account['account_name']
     account_id = account['id']
 
     print(f"  [快手] {account_name} — 开始采集...", flush=True)
 
-    # 同步 cookie
-    src = COOKIES_DIR / f"kuaishou_{account_name}.json"
-    if src.exists():
-        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
-        win_cookies.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(src), str(win_cookies / f"kuaishou_{account_name}.json"))
-
-    result = subprocess.run(
-        ['cmd.exe', '/c', 'python',
-         config.windows_script('kuaishou'),
-         account_name],
-        capture_output=True, text=False, timeout=config.collect_timeout()
-    )
+    result = run_script("kuaishou", account_name)
     if result.returncode != 0:
-        try:
-            err = result.stderr.decode('gbk', errors='replace')[:500]
-        except Exception:
-            err = str(result.stderr)[:500]
-        print(f"  [快手] {account_name} — 采集失败: {err}", flush=True)
+        print(f"  [快手] {account_name} — 采集失败: {_stderr_str(result)}", flush=True)
         return
 
-    tmp_file = Path(WIN_TMP_WSL) / f"kuaishou_{account_name}.json"
+    tmp_file = TMP_DIR / f"kuaishou_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [快手] {account_name} — 未生成结果文件", flush=True)
         return
@@ -261,12 +237,8 @@ def collect_kuaishou(conn, account):
         print(f"  [快手] {account_name} — 无视频数据", flush=True)
         raise Exception("无视频数据，可能cookie失效")
 
-    # 自动更新昵称
     if nickname and nickname != account['nickname']:
-        conn.execute(
-            'UPDATE accounts SET nickname=? WHERE id=?',
-            (nickname, account_id)
-        )
+        conn.execute('UPDATE accounts SET nickname=? WHERE id=?', (nickname, account_id))
         print(f"  [快手] {account_name} — 更新昵称: {nickname}", flush=True)
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M:00')
@@ -278,14 +250,11 @@ def collect_kuaishou(conn, account):
         if photo_id:
             aweme_id = f"ks_{photo_id}"
         else:
-            # 用标题+时间作为去重 key
-            import hashlib
             dedup_key = f"{v.get('title','')}_{v.get('publish_time','')}"
             aweme_id = f"ks_{hashlib.md5(dedup_key.encode()).hexdigest()[:12]}"
 
         title = v.get('title', v.get('caption', ''))
         create_time = v.get('publish_time') or v.get('timestamp', 0)
-
         view_count = int(str(v.get('view_count', 0) or 0).replace(',', ''))
         like_count = int(str(v.get('like_count', 0) or 0).replace(',', ''))
         comment_count = int(str(v.get('comment_count', 0) or 0).replace(',', ''))
@@ -299,7 +268,6 @@ def collect_kuaishou(conn, account):
         )
         if is_new:
             new_count += 1
-
         added = add_snapshot(
             conn, video_id, now,
             play_count=view_count,
@@ -317,27 +285,17 @@ def collect_kuaishou(conn, account):
 # ── 小红书采集器 ──────────────────────────────────────
 
 def collect_xiaohongshu(conn, account):
-    """采集小红书账号的作品列表 — 调用 Windows 侧 win_xiaohongshu.py"""
     account_name = account['account_name']
     account_id = account['id']
 
     print(f"  [小红书] {account_name} — 开始采集...", flush=True)
 
-    result = subprocess.run(
-        ['cmd.exe', '/c', 'python',
-         config.windows_script('xiaohongshu'),
-         account_name],
-        capture_output=True, text=False, timeout=config.collect_timeout()
-    )
+    result = run_script("xiaohongshu", account_name)
     if result.returncode != 0:
-        try:
-            err = result.stderr.decode('gbk', errors='replace')[:500]
-        except:
-            err = str(result.stderr)[:500]
-        print(f"  [小红书] {account_name} — 采集失败: {err}", flush=True)
+        print(f"  [小红书] {account_name} — 采集失败: {_stderr_str(result)}", flush=True)
         return
 
-    tmp_file = Path(WIN_TMP_WSL) / f"xiaohongshu_{account_name}.json"
+    tmp_file = TMP_DIR / f"xiaohongshu_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [小红书] {account_name} — 未生成结果文件", flush=True)
         return
@@ -385,13 +343,10 @@ def collect_xiaohongshu(conn, account):
         )
         if is_new:
             new_count += 1
-
         added = add_snapshot(
             conn, video_id, now,
-            play_count=views,
-            digg_count=likes,
-            comment_count=comments,
-            collect_count=collects,
+            play_count=views, digg_count=likes,
+            comment_count=comments, collect_count=collects,
         )
         if added:
             snap_count += 1
@@ -404,34 +359,17 @@ def collect_xiaohongshu(conn, account):
 # ── 视频号采集器 ─────────────────────────────────────
 
 def collect_shipinhao(conn, account):
-    """采集视频号账号的作品列表 — 调用 Windows 侧 win_shipinhao.py"""
     account_name = account['account_name']
     account_id = account['id']
 
     print(f"  [视频号] {account_name} — 开始采集...", flush=True)
 
-    # 同步 cookie
-    src = SOCIAL_AUTO_UPLOAD_DIR / "cookies" / "tencent_uploader" / account_name
-    if src.exists():
-        win_cookies = Path(config.wsl_path("social-auto-upload/cookies/tencent_uploader"))
-        win_cookies.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(src), str(win_cookies / account_name))
-
-    result = subprocess.run(
-        ['cmd.exe', '/c', 'python',
-         config.windows_script('shipinhao'),
-         account_name],
-        capture_output=True, text=False, timeout=config.collect_timeout()
-    )
+    result = run_script("shipinhao", account_name)
     if result.returncode != 0:
-        try:
-            err = result.stderr.decode('gbk', errors='replace')[:500]
-        except:
-            err = str(result.stderr)[:500]
-        print(f"  [视频号] {account_name} — 采集失败: {err}", flush=True)
+        print(f"  [视频号] {account_name} — 采集失败: {_stderr_str(result)}", flush=True)
         return
 
-    tmp_file = Path(WIN_TMP_WSL) / f"shipinhao_{account_name}.json"
+    tmp_file = TMP_DIR / f"shipinhao_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [视频号] {account_name} — 未生成结果文件", flush=True)
         return
@@ -479,7 +417,6 @@ def collect_shipinhao(conn, account):
         )
         if is_new:
             new_count += 1
-
         added = add_snapshot(
             conn, video_id, now,
             play_count=v.get('read_count', 0),
@@ -497,29 +434,30 @@ def collect_shipinhao(conn, account):
 
 
 # ── 主入口 ──────────────────────────────────────────────
-_COLLECT_RESULTS = []  # 全局收集每个账号的执行结果
+
+_COLLECT_RESULTS = []
+
 
 def collect_platform(conn, platform: str, accounts):
     print(f"\n{'='*50}")
     print(f"平台: {platform} | 账号数: {len(accounts)}")
     print(f"{'='*50}")
 
-    if platform == 'douyin':
-        collector = collect_douyin
-    elif platform == 'kuaishou':
-        collector = collect_kuaishou
-    elif platform == 'xiaohongshu':
-        collector = collect_xiaohongshu
-    elif platform == 'shipinhao':
-        collector = collect_shipinhao
-    else:
+    collectors = {
+        'douyin': collect_douyin,
+        'kuaishou': collect_kuaishou,
+        'xiaohongshu': collect_xiaohongshu,
+        'shipinhao': collect_shipinhao,
+    }
+    collector = collectors.get(platform)
+    if not collector:
         print(f"  [跳过] {platform} 采集器未实现")
         return
 
     for acct in accounts:
         nick = acct['nickname'] or acct['account_name']
 
-        # Cookie 文件预检：超过 N 天未更新则跳过
+        # Cookie 文件预检
         if platform in ('douyin', 'kuaishou', 'xiaohongshu'):
             cookie_path = COOKIES_DIR / f"{platform}_{acct['account_name']}.json"
             if cookie_path.exists():
@@ -540,8 +478,6 @@ def collect_platform(conn, platform: str, accounts):
             conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('ok', acct['id']))
             conn.commit()
         except Exception as e:
-            # 自动重试一次
-            import time
             delay = config.collect_retry_delay()
             print(f"  [重试] {nick} — 失败: {str(e)[:60]}，{delay}秒后重试...", flush=True)
             time.sleep(delay)
@@ -560,13 +496,11 @@ def collect_platform(conn, platform: str, accounts):
 
 
 def write_status(status, progress='', done=0, total=0, results=None):
-    """写入采集状态文件，供前端轮询"""
-    import json
     status_path = MONITOR_DIR / 'collect_status.json'
     try:
         with open(status_path, 'r') as f:
             existing = json.load(f)
-    except:
+    except Exception:
         existing = {'status': 'running', 'lines': [], 'results': []}
     existing['status'] = status
     existing['progress'] = progress
@@ -579,70 +513,8 @@ def write_status(status, progress='', done=0, total=0, results=None):
     try:
         with open(status_path, 'w') as f:
             json.dump(existing, f, ensure_ascii=False)
-    except:
+    except Exception:
         pass
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Social Monitor Collector')
-    parser.add_argument('--platform', choices=['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'])
-    parser.add_argument('--account')
-    parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument('--stats-only', action='store_true',
-                        help='仅采集账号统计数据（粉丝数等），不采集视频数据')
-    args = parser.parse_args()
-
-    conn = get_db()
-    accounts = get_active_accounts(conn, args.platform, args.account)
-
-    if not accounts:
-        print("没有找到需要采集的账号")
-        sys.exit(0)
-
-    print(f"📡 Social Monitor — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    write_status('running', '启动...', 0, len(accounts))
-
-    platforms = {}
-    for acct in accounts:
-        platforms.setdefault(acct['platform'], []).append(acct)
-
-    total = len(accounts)
-    done = 0
-    for platform, accts in platforms.items():
-        if args.dry_run:
-            print(f"\\n  [DRY-RUN] {platform}: {len(accts)} 个账号")
-            for a in accts:
-                names = []
-                if a['nickname']:
-                    names.append(f"nick={a['nickname']}")
-                extra = f" ({', '.join(names)})" if names else ""
-                print(f"    - {a['account_name']}{extra}")
-        elif args.stats_only:
-            collect_account_stats(conn, platform, accts)
-            done += len(accts)
-            write_status('running', f'{platform} 账号统计完成', done, total)
-        else:
-            collect_platform(conn, platform, accts)
-            done += len(accts)
-            write_status('running', f'{platform} 完成', done, total)
-
-    conn.close()
-    write_status('success', '全部完成', total, total)
-    # 写入详细结果
-    try:
-        import json
-        status_path = MONITOR_DIR / 'collect_status.json'
-        with open(status_path, 'r') as f:
-            existing = json.load(f)
-        existing['results'] = _COLLECT_RESULTS
-        with open(status_path, 'w') as f:
-            json.dump(existing, f, ensure_ascii=False)
-    except:
-        pass
-    print(f"\\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-
-WIN_STATS_SCRIPT = config.windows_script('stats')
 
 
 def collect_account_stats(conn, platform, accounts):
@@ -650,36 +522,18 @@ def collect_account_stats(conn, platform, accounts):
         account_name = account['account_name']
         account_id = account['id']
         print(f"  [账号统计] {platform}/{account_name} — 开始采集...", flush=True)
-        # 同步 cookie
-        if platform == 'shipinhao':
-            src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / 'tencent_uploader' / account_name
-            win_cookies = Path(config.wsl_path("social-auto-upload/cookies/tencent_uploader"))
-            if src.exists():
-                win_cookies.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(str(src), str(win_cookies / account_name))
-        else:
-            src = COOKIES_DIR / f"{platform}_{account_name}.json"
-            if src.exists():
-                win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
-                win_cookies.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(str(src), str(win_cookies / f"{platform}_{account_name}.json"))
-        result = subprocess.run(
-            ['cmd.exe', '/c', 'python', WIN_STATS_SCRIPT, platform, account_name],
-            capture_output=True, text=False, timeout=config.collect_timeout()
-        )
+
+        result = run_script("stats", platform, account_name)
         if result.returncode != 0:
-            try:
-                err = result.stderr.decode('gbk', errors='replace')[:300]
-            except:
-                err = str(result.stderr)[:300]
-            print(f"  [账号统计] {platform}/{account_name} — 失败: {err}", flush=True)
+            print(f"  [账号统计] {platform}/{account_name} — 失败: {_stderr_str(result)}", flush=True)
             _COLLECT_RESULTS.append({
                 'platform': platform, 'account': account_name,
                 'nickname': account['nickname'] or account_name,
-                'status': 'error', 'message': f'账号统计采集失败: {err}'
+                'status': 'error', 'message': f'账号统计采集失败: {_stderr_str(result)}'
             })
             continue
-        tmp_file = Path(WIN_TMP_WSL) / f"stats_{platform}_{account_name}.json"
+
+        tmp_file = TMP_DIR / f"stats_{platform}_{account_name}.json"
         if not tmp_file.exists():
             print(f"  [账号统计] {platform}/{account_name} — 未生成结果文件", flush=True)
             _COLLECT_RESULTS.append({
@@ -688,10 +542,11 @@ def collect_account_stats(conn, platform, accounts):
                 'status': 'error', 'message': '账号统计: 未生成结果文件'
             })
             continue
+
         with open(str(tmp_file), 'r', encoding='utf-8') as f:
             stats = json.load(f)
+
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # 昵称不在这里更新——视频采集时才从 API 获取准确昵称
         conn.execute(
             '''UPDATE accounts SET
                follower_count=?, total_digg_count=?, total_play_count=?,
@@ -718,10 +573,76 @@ def collect_account_stats(conn, platform, accounts):
         })
         try:
             tmp_file.unlink()
-        except:
+        except Exception:
             pass
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Social Monitor Collector')
+    parser.add_argument('--platform', choices=['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao'])
+    parser.add_argument('--account')
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--stats-only', action='store_true',
+                        help='仅采集账号统计数据（粉丝数等），不采集视频数据')
+    args = parser.parse_args()
+
+    # 确保 tmp 目录存在
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
+
+    conn = get_db()
+    accounts = get_active_accounts(conn, args.platform, args.account)
+
+    if not accounts:
+        print("没有找到需要采集的账号")
+        sys.exit(0)
+
+    print(f"📡 Social Monitor — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if config.is_wsl():
+        print(f"   运行环境: WSL")
+    else:
+        print(f"   运行环境: {config._SYSTEM}")
+
+    write_status('running', '启动...', 0, len(accounts))
+
+    platforms = {}
+    for acct in accounts:
+        platforms.setdefault(acct['platform'], []).append(acct)
+
+    total = len(accounts)
+    done = 0
+    for platform, accts in platforms.items():
+        if args.dry_run:
+            print(f"\n  [DRY-RUN] {platform}: {len(accts)} 个账号")
+            for a in accts:
+                names = []
+                if a['nickname']:
+                    names.append(f"nick={a['nickname']}")
+                extra = f" ({', '.join(names)})" if names else ""
+                print(f"    - {a['account_name']}{extra}")
+        elif args.stats_only:
+            collect_account_stats(conn, platform, accts)
+            done += len(accts)
+            write_status('running', f'{platform} 账号统计完成', done, total)
+        else:
+            collect_platform(conn, platform, accts)
+            done += len(accts)
+            write_status('running', f'{platform} 完成', done, total)
+
+    conn.close()
+    write_status('success', '全部完成', total, total)
+
+    try:
+        status_path = MONITOR_DIR / 'collect_status.json'
+        with open(status_path, 'r') as f:
+            existing = json.load(f)
+        existing['results'] = _COLLECT_RESULTS
+        with open(status_path, 'w') as f:
+            json.dump(existing, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+    print(f"\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 if __name__ == '__main__':
     main()
-

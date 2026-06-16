@@ -17,7 +17,8 @@ try:
 except ImportError:
     from playwright.async_api import async_playwright
 
-USERPROFILE = os.environ['USERPROFILE']
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
 
 PLATFORM_CONFIG = {
     'douyin': {
@@ -43,8 +44,7 @@ PLATFORM_CONFIG = {
 }
 
 # 反检测 — 使用 puppeteer-extra 完整 stealth 脚本（180KB，覆盖所有检测向量）
-STEALTH_JS_PATH = os.path.join(USERPROFILE, 'Desktop', 'social-monitor',
-    'social-auto-upload', 'utils', 'stealth.min.js')
+STEALTH_JS_PATH = str(PROJECT_ROOT / 'social-auto-upload' / 'utils' / 'stealth.min.js')
 
 
 async def login(platform, account_name):
@@ -54,8 +54,7 @@ async def login(platform, account_name):
         sys.exit(1)
 
     # cookie 路径 — 保存到 cookies/{platform}_uploader/ 下
-    cookie_base = os.path.join(USERPROFILE, 'Desktop', 'social-monitor',
-        'social-auto-upload', 'cookies')
+    cookie_base = str(COOKIES_DIR)
     if platform == 'shipinhao':
         cookie_dir = os.path.join(cookie_base, 'tencent_uploader')
     else:
@@ -207,7 +206,7 @@ async def login(platform, account_name):
     print(f"已同步到 WSL", flush=True)
 
     # 更新数据库 cookie_status（登录成功 → ok）
-    status_script = '/mnt/c/Users/NINGMEI/Desktop/social-monitor/update_cookie_status.py'
+    # Cookie status updated by main collector after successful login
     os.system(f'wsl python3 {status_script} {platform} {account_name} 2>/dev/null || true')
     print(f"OK", flush=True)
 

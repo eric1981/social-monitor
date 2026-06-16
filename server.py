@@ -5,7 +5,6 @@ Social Monitor — 轻量 API 服务
 """
 
 import json
-import shutil
 import sqlite3
 import subprocess
 import sys
@@ -660,15 +659,14 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
 
             subprocess.Popen(
-                ['cmd.exe', '/c', 'python',
-                 config.windows_script('login'),
+                [sys.executable, str(MONITOR_DIR / 'win_login.py'),
                  platform, account_name],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
             json_response(self, {
                 'status': 'ok',
-                'message': f'扫码窗口已打开，请在 Windows 上扫码登录 {platform}',
+                'message': f'扫码窗口已打开，请在浏览器中扫码登录 {platform}',
             })
 
         elif parsed.path == '/api/account/toggle':
@@ -706,14 +704,9 @@ class Handler(BaseHTTPRequestHandler):
                             st = json.load(f)
                         account_name = st.get('account_name', '')
                         platform = st.get('platform', '')
-                        cookies_wsl = Path(config.wsl_path("social-auto-upload/cookies"))
-                        done_file = cookies_wsl / f'.{platform}_{account_name}_done'
+                        # 检查 relogin 脚本写的完成标记
+                        done_file = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'.{platform}_{account_name}_done'
                         if done_file.exists():
-                            win_cookies = cookies_wsl
-                            src_file = win_cookies / f'{platform}_{account_name}.json'
-                            dst = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
-                            if src_file.exists():
-                                shutil.copy2(str(src_file), str(dst))
                             done_file.unlink(missing_ok=True)
                             st['status'] = 'success'
                             st['message'] = '扫码登录成功'
@@ -725,27 +718,20 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     json_response(self, {'status': 'idle', 'message': '无扫码登录任务'})
             else:
-                """POST /api/relogin/douyin/benxian-app — 后台启动扫码"""
+                """POST /api/relogin/{platform}/{account} — 后台启动扫码"""
                 parts = parsed.path.split('/')
                 if len(parts) >= 5:
                     platform = parts[3]
                     account_name = parts[4]
                     try:
-                        src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
-                        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
-                        win_cookies.mkdir(parents=True, exist_ok=True)
-                        if src.exists():
-                            shutil.copy2(str(src), str(win_cookies / f'{platform}_{account_name}.json'))
-
                         log_path = MONITOR_DIR / 'relogin_status.json'
                         with open(log_path, 'w') as f:
                             json.dump({'status': 'running', 'platform': platform, 'account_name': account_name,
                                        'message': f'正在打开浏览器扫码登录 {platform}/{account_name}...'}, f)
 
                         subprocess.Popen(
-                            ['cmd.exe', '/c', 'start', '/wait', 'python',
-                             config.windows_script('relogin'), platform, account_name,
-                             '&&', 'echo', 'DONE', '>', str(win_cookies / f'.{platform}_{account_name}_done')],
+                            [sys.executable, str(MONITOR_DIR / 'win_relogin.py'),
+                             platform, account_name],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                         )
                         json_response(self, {'status': 'ok', 'message': '扫码登录已启动，请查看浏览器窗口'})

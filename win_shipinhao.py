@@ -9,12 +9,13 @@ try:
 except ImportError:
     from playwright.async_api import async_playwright
 
-USERPROFILE = os.environ['USERPROFILE']
+PROJECT_ROOT = Path(__file__).parent
+COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+TMP_DIR = PROJECT_ROOT / 'tmp'
 
 async def collect():
     account_name = sys.argv[1] if len(sys.argv) > 1 else 'sph1'
-    cookie_file = os.path.join(USERPROFILE, 'Desktop', 'social-monitor',
-        'social-auto-upload', 'cookies', 'tencent_uploader', account_name)
+    cookie_file = str(COOKIES_DIR / 'tencent_uploader' / account_name)
 
     if not os.path.exists(cookie_file):
         print(f"ERROR: Cookie not found"); sys.exit(1)
@@ -127,8 +128,8 @@ async def collect():
                 })
 
             out_data = {'videos': cleaned, 'nickname': nickname}
-            out_path = os.path.join(USERPROFILE, 'Desktop', 'social-monitor', 'tmp', f'shipinhao_{account_name}.json')
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            out_path = TMP_DIR / f'shipinhao_{account_name}.json'
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(out_data, f, ensure_ascii=False)
 
