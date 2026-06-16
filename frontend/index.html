@@ -57,25 +57,48 @@ body {
 
 /* ── Top Nav ────────────────────────────────────── */
 .top-nav {
-  display: flex; align-items: center; height: 64px;
-  border-bottom: 1px solid var(--hairline-soft);
-  margin-bottom: var(--space-xl);
+  display: flex; align-items: center; height: 56px;
+  padding: 0 var(--space-lg); margin: 0 calc(-1 * var(--space-lg));
+  border-bottom: 1px solid var(--hairline-soft); margin-bottom: var(--space-lg);
   gap: var(--space-lg);
 }
 .top-nav .logo {
-  font-size: 20px; font-weight: 600; color: var(--primary);
-  letter-spacing: -0.3px;
+  font-size: 18px; font-weight: 700; color: var(--primary);
+  letter-spacing: -0.3px; text-decoration: none; margin-right: var(--space-md);
 }
 .top-nav .logo span { color: var(--ink); }
-.top-nav .nav-tabs { display: flex; gap: var(--space-lg); flex: 1; justify-content: center; }
-.top-nav .nav-tabs a {
-  text-decoration: none; font-size: 16px; font-weight: 600; color: var(--muted);
-  padding-bottom: 18px; border-bottom: 2px solid transparent; cursor: pointer;
+.top-nav .nav-links { display: flex; gap: var(--space-sm); flex: 1; }
+.top-nav .nav-links a {
+  text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 6px 14px; border-radius: var(--rounded-sm); transition: all 0.15s;
 }
-.top-nav .nav-tabs a.active { color: var(--ink); border-bottom-color: var(--ink); }
+.top-nav .nav-links a:hover { background: var(--surface-soft); color: var(--ink); }
+.top-nav .nav-links a.active {
+  background: var(--ink); color: var(--canvas); font-weight: 600;
+}
 .top-nav .nav-right { display: flex; gap: var(--space-md); align-items: center; }
-.top-nav .nav-right a { text-decoration: none; color: var(--muted); font-size: 14px; cursor: pointer; }
+.top-nav .nav-right a { text-decoration: none; color: var(--muted); font-size: 13px; font-weight: 500; }
 .top-nav .nav-right a:hover { color: var(--ink); }
+.top-nav .nav-right select {
+  font-size: 12px; padding: 5px 8px; border: 1px solid var(--hairline);
+  border-radius: var(--rounded-sm); background: var(--canvas); color: var(--muted); cursor: pointer;
+}
+
+/* ── Platform Filter Tabs ──────────────────── */
+.platform-tabs {
+  display: flex; gap: var(--space-sm); margin-bottom: var(--space-base);
+  flex-wrap: wrap;
+}
+.platform-tabs a {
+  text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 6px 14px; border-radius: var(--rounded-full);
+  background: var(--surface-soft); cursor: pointer; transition: all 0.15s;
+  border: 1px solid transparent;
+}
+.platform-tabs a:hover { background: var(--hairline-soft); color: var(--ink); }
+.platform-tabs a.active {
+  background: var(--ink); color: var(--canvas); border-color: var(--ink);
+}
 
 /* ── Collect Log ──────────────────────────────── */
 .collect-log { background: #1a1a2e; color: #00ff88; border-radius: var(--rounded-md); padding: var(--space-base); margin-bottom: var(--space-lg); max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; }
@@ -131,16 +154,28 @@ body {
   margin-bottom: var(--space-xl);
 }
 .stat-card {
-  background: var(--surface-soft); border-radius: var(--rounded-md);
-  padding: var(--space-lg); text-align: center;
-  display: flex; flex-direction: column; justify-content: center;
-  min-height: 80px;
+  background: var(--canvas); border-radius: var(--rounded-md);
+  border: 1px solid var(--hairline-soft);
+  padding: var(--space-lg) var(--space-md); text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 96px; position: relative; overflow: hidden;
 }
-.stat-card .stat-value { font-size: 20px; font-weight: 700; }
-.stat-card .stat-label { font-size: 11px; color: var(--muted-soft); margin-bottom: 2px; }
-.stat-delta { font-size: 11px; margin-top: 2px; }
+.stat-card .stat-accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.stat-card .stat-icon { font-size: 18px; margin-bottom: 2px; line-height: 1; }
+.stat-card .stat-value { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.stat-card .stat-label { font-size: 10px; color: var(--muted-soft); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-delta { font-size: 11px; margin-top: 2px; font-weight: 500; }
 .stat-delta.up { color: #22c55e; }
 .stat-delta.down { color: #ef4444; }
+
+/* Chart stat card */
+.stat-chart-card { padding-bottom: var(--space-sm); min-height: 110px; cursor: default; }
+.stat-chart-header { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 0; }
+.stat-chart-wrap { height: 32px; margin: 0 -4px; position: relative; }
+.stat-chart-wrap canvas { width: 100% !important; height: 100% !important; }
+.stat-chart-card .stat-label { margin-top: 0; }
 
 /* Sort Bar */
 .sort-bar { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-base); }
@@ -324,7 +359,8 @@ body {
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 744px) {
   .app { padding: var(--space-base); }
-  .top-nav .nav-tabs { display: none; }
+  .platform-tabs { gap: 4px; }
+  .platform-tabs a { font-size: 12px; padding: 5px 10px; }
   .stats-bar { grid-template-columns: repeat(3, 1fr); }
   .card-grid { grid-template-columns: 1fr; }
   .search-bar { height: 48px; }
@@ -336,31 +372,29 @@ body {
 <div class="app" id="app">
   <!-- Top Nav -->
   <nav class="top-nav">
-    <div class="logo">📡 <span>Social Monitor</span></div>
-    <div class="nav-tabs">
-      <a class="active" @click="setTab('all')">All</a>
-      <a :class="{active: tab==='douyin'}" @click="setTab('douyin')"><img src="douyin.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 抖音</a>
-      <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="kuaishou.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
-      <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
-      <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
-      <a href="/accounts.html" style="margin-left:var(--space-sm);opacity:0.5;">👤 账号</a>
-      <a href="/api/export/videos" style="opacity:0.4;font-size:12px;text-decoration:none;margin-left:4px;" title="导出全部视频CSV">📥</a>
+    <a href="/" class="logo">📡 <span>Social Monitor</span></a>
+    <div class="nav-links">
+      <a href="/" class="active">看板</a>
+      <a href="/accounts.html">账号管理</a>
+      <a href="/settings.html">配置</a>
     </div>
     <div class="nav-right">
-      <a @click="triggerCollect" style="cursor:pointer;position:relative;">
+      <a href="/api/export/videos" style="font-size:12px;">导出CSV</a>
+      <a @click="triggerCollect" style="cursor:pointer;">
         <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:4px;"></span>
         <span v-else>⬇</span> 抓取
       </a>
-      <a @click="refreshData">🔄 刷新</a>
-      <a @click="openLoginModal" style="color:var(--primary);font-weight:600;">+ 新增账号</a>
-      <select v-model="refreshInterval" @change="setAutoRefresh" style="font-size:13px;padding:4px 8px;border:1px solid var(--hairline);border-radius:var(--rounded-sm);background:var(--canvas);color:var(--muted);cursor:pointer;">
-        <option value="0">手动刷新</option>
-        <option value="30">每30秒</option>
-        <option value="60">每1分</option>
-        <option value="300">每5分</option>
-      </select>
     </div>
   </nav>
+
+  <!-- Platform Tabs -->
+  <div class="platform-tabs">
+    <a :class="{active: tab==='all'}" @click="setTab('all')">All</a>
+    <a :class="{active: tab==='douyin'}" @click="setTab('douyin')"><img src="douyin.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 抖音</a>
+    <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="kuaishou.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
+    <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
+    <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
+  </div>
 
   <!-- Collect Log -->
   <div v-if="collectProgress || relogining" class="collect-log">
@@ -388,12 +422,52 @@ body {
 
   <!-- Stats -->
   <div class="stats-bar">
-    <div class="stat-card"><div class="stat-value">{{ stats.accounts }}</div><div class="stat-label">账号</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.videos }}</div><div class="stat-label">视频</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.snapshots }}</div><div class="stat-label">快照</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.totalViews }}</div><div class="stat-label">总播放</div><div class="stat-delta" :class="{up: stats.playDelta>0, down: stats.playDelta<0}">{{ stats.playDelta > 0 ? '↑' : stats.playDelta < 0 ? '↓' : '' }}{{ fmtDelta(stats.playDelta) }}</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.yesterdayViews }}</div><div class="stat-label">昨日增量</div></div>
-    <div class="stat-card"><div class="stat-value">{{ stats.lastCollect }}</div><div class="stat-label">上次采集</div></div>
+    <div class="stat-card">
+      <div class="stat-accent" style="background:#428bff"></div>
+      <div class="stat-icon">👤</div>
+      <div class="stat-value">{{ stats.accounts }}</div>
+      <div class="stat-label">账号</div>
+    </div>
+    <div class="stat-card stat-chart-card">
+      <div class="stat-accent" style="background:#22c55e"></div>
+      <div class="stat-chart-header">
+        <span class="stat-icon">🎬</span>
+        <span class="stat-value">{{ stats.videos }}</span>
+      </div>
+      <div class="stat-chart-wrap"><canvas id="spark-videos"></canvas></div>
+      <div class="stat-label">视频</div>
+    </div>
+    <div class="stat-card stat-chart-card">
+      <div class="stat-accent" style="background:#8b5cf6"></div>
+      <div class="stat-chart-header">
+        <span class="stat-icon">📸</span>
+        <span class="stat-value">{{ stats.snapshots }}</span>
+      </div>
+      <div class="stat-chart-wrap"><canvas id="spark-snapshots"></canvas></div>
+      <div class="stat-label">快照</div>
+    </div>
+    <div class="stat-card stat-chart-card">
+      <div class="stat-accent" style="background:var(--primary)"></div>
+      <div class="stat-chart-header">
+        <span class="stat-icon">▶</span>
+        <span class="stat-value">{{ stats.totalViews }}</span>
+      </div>
+      <div class="stat-chart-wrap"><canvas id="spark-play"></canvas></div>
+      <div class="stat-label">总播放</div>
+      <div class="stat-delta" :class="{up: stats.playDelta>0, down: stats.playDelta<0}">{{ stats.playDelta > 0 ? '↑' : stats.playDelta < 0 ? '↓' : '' }}{{ fmtDelta(stats.playDelta) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-accent" style="background:#f59e0b"></div>
+      <div class="stat-icon">📈</div>
+      <div class="stat-value">{{ stats.yesterdayViews }}</div>
+      <div class="stat-label">昨日增量</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-accent" style="background:var(--muted-soft)"></div>
+      <div class="stat-icon">🕐</div>
+      <div class="stat-value" style="font-size:16px;font-weight:600;">{{ stats.lastCollect }}</div>
+      <div class="stat-label">上次采集</div>
+    </div>
   </div>
 
   <!-- Search Bar -->
@@ -487,49 +561,6 @@ body {
     <button @click="currentPage=totalPages" :disabled="currentPage===totalPages">»»</button>
   </div>
 
-  <!-- Login Modal (inside #app so Vue can control it) -->
-  <div v-if="showLoginModal" class="modal-overlay" @click.self="closeLoginModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>新增账号 / 重新扫码</h2>
-        <button class="modal-close" @click="closeLoginModal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">平台</label>
-          <select v-model="loginPlatform" class="form-select">
-            <option value="douyin">抖音</option>
-            <option value="kuaishou">快手</option>
-            <option value="xiaohongshu">小红书</option>
-            <option value="shipinhao">视频号</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">已有账号（选填）</label>
-          <select v-model="loginAccount" class="form-select" @change="onLoginAccountChange">
-            <option value="">— 手动输入新账号名 —</option>
-            <option v-for="a in accountOptionsWithPlatform" :key="a.key" :value="a.key">{{ a.label }}</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">或输入新账号名</label>
-          <input v-model="loginAccountInput" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
-          <div class="form-hint">已有账号将从下拉选择，新账号手动输入</div>
-        </div>
-        <div v-if="loginStatus" class="form-status" :class="{error: loginStatus.includes('失败') || loginStatus.includes('超时')}">
-          {{ loginStatus }}
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy">取消</button>
-        <button class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccount.trim()">
-          <span v-if="loginBusy" class="spinner-sm"></span>
-          <span v-else>打开浏览器扫码</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- Trend Modal -->
   <div v-if="showTrendModal" class="modal-overlay" @click.self="closeTrendModal">
     <div class="modal" style="width:680px;">
@@ -574,13 +605,8 @@ createApp({
     const quickDate = ref('');
     const loading = ref(false);
     const refreshInterval = ref(0);
-    const showLoginModal = ref(false);
-    const loginPlatform = ref('douyin');
-    const loginAccount = ref('');
-    const loginAccountInput = ref('');
-    const loginBusy = ref(false);
-    const loginStatus = ref('');
     const collecting = ref(false);
+    const refreshing = ref(false);
     const collectProgress = ref('');
     const collectResults = ref([]);
     const relogining = ref(false);
@@ -588,6 +614,8 @@ createApp({
     const health = ref({});
     const currentPage = ref(1);
     const pageSize = ref(24);
+    const statsHistory = ref([]);
+    let sparkCharts = {};
     let collectTimer = null;
     let timer = null;
 
@@ -633,22 +661,6 @@ createApp({
       return [...visibleAccounts]
         .sort()
         .map(key => ({ key, label: `${map[key] || key}` }));
-    });
-
-    const accountOptionsWithPlatform = computed(() => {
-      const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
-      const nickMap = {};
-      const platMap = {};
-      const idMap = {};
-      data.value.accounts.forEach(a => {
-        nickMap[a.account_name] = a.nickname || a.account_name;
-        platMap[a.account_name] = platformLabels[a.platform] || a.platform;
-        idMap[a.account_name + ':' + a.platform] = a.id;
-      });
-      return data.value.accounts
-        .filter(a => a.is_active)
-        .sort((a, b) => a.platform.localeCompare(b.platform) || a.account_name.localeCompare(b.account_name))
-        .map(a => ({ key: a.account_name, label: `${platMap[a.account_name]}：${nickMap[a.account_name]}` }));
     });
 
     const accountIdMap = computed(() => {
@@ -762,17 +774,17 @@ createApp({
     });
 
     async function refreshData() {
-      loading.value = true;
+      refreshing.value = true;
       try {
         const resp = await fetch('/api/data');
         const d = await resp.json();
         data.value = d;
-        // 同时拉取健康状态
         fetchHealth();
+        fetchStatsHistory();
       } catch (e) {
         console.error('Failed to fetch:', e);
       } finally {
-        loading.value = false;
+        refreshing.value = false;
       }
     }
 
@@ -781,6 +793,44 @@ createApp({
         const resp = await fetch('/api/health');
         health.value = await resp.json();
       } catch(e) {}
+    }
+
+    async function fetchStatsHistory() {
+      try {
+        const resp = await fetch('/api/stats/history');
+        const d = await resp.json();
+        statsHistory.value = d.points || [];
+        await new Promise(r => setTimeout(r, 100));
+        renderSparkCharts();
+      } catch(e) {}
+    }
+
+    function renderSparkCharts() {
+      const pts = statsHistory.value;
+      if (!pts.length || typeof Chart === 'undefined') return;
+      ['videos', 'snapshots', 'play'].forEach(key => {
+        const canvas = document.getElementById('spark-' + key);
+        if (!canvas) return;
+        if (sparkCharts[key]) { sparkCharts[key].destroy(); }
+        sparkCharts[key] = new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: pts.map(p => p.date),
+            datasets: [{
+              data: pts.map(p => p[key]),
+              borderColor: key === 'videos' ? '#22c55e' : key === 'snapshots' ? '#8b5cf6' : '#ff385c',
+              backgroundColor: 'transparent',
+              borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+            elements: { point: { radius: 0 } }
+          }
+        });
+      });
     }
 
     async function triggerCollect() {
@@ -848,20 +898,11 @@ createApp({
       }
     }
 
-    function openLoginModal() {
-      showLoginModal.value = true;
-      loginPlatform.value = 'douyin';
-      loginAccount.value = '';
-      loginAccountInput.value = '';
-      loginStatus.value = '';
-      loginBusy.value = false;
-    }
-
-    function onLoginAccountChange() {
-      // 选了已有账号时，自动切换到对应平台
-      if (!loginAccount.value) return;
-      const a = data.value.accounts.find(x => x.account_name === loginAccount.value);
-      if (a) loginPlatform.value = a.platform;
+    function highlightPoint(i) {
+      if (trendChart) {
+        trendChart.setActiveElements([{datasetIndex: 0, index: i}]);
+        trendChart.update();
+      }
     }
 
     const showTrendModal = ref(false);
@@ -884,7 +925,6 @@ createApp({
         trendMeta.value = d.meta || {};
         trendPoints.value = d.points || [];
         trendLoading.value = false;
-        // 等 Vue 渲染 canvas DOM
         await new Promise(r => setTimeout(r, 200));
         renderTrendChart();
       } catch (e) {
@@ -924,49 +964,6 @@ createApp({
       });
     }
 
-    function highlightPoint(i) {
-      if (trendChart) {
-        trendChart.setActiveElements([{datasetIndex: 0, index: i}]);
-        trendChart.update();
-      }
-    }
-
-    function closeLoginModal() {
-      showLoginModal.value = false;
-    }
-
-    async function doLogin() {
-      // 优先用下拉选择，其次手动输入
-      const account = loginAccount.value || loginAccountInput.value.trim();
-      if (!account) {
-        loginStatus.value = '请选择已有账号或输入新账号名';
-        return;
-      }
-      loginBusy.value = true;
-      loginStatus.value = '正在打开扫码窗口...';
-      try {
-        const resp = await fetch('/api/login', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            platform: loginPlatform.value,
-            account_name: account,
-          }),
-        });
-        const result = await resp.json();
-        if (result.status === 'ok') {
-          closeLoginModal();
-          refreshData();
-        } else {
-          loginStatus.value = result.message || '请求失败';
-          loginBusy.value = false;
-        }
-      } catch (e) {
-        loginStatus.value = '请求失败: ' + e.message;
-        loginBusy.value = false;
-      }
-    }
-
     function setTab(t) { tab.value = t; }
 
     function setQuickDate(d) {
@@ -996,20 +993,19 @@ createApp({
     }
 
     onMounted(() => {
-      console.log('SocialMonitor mounted, showLoginModal=', showLoginModal.value);
+      console.log('SocialMonitor mounted');
       refreshData();
       fetchHealth();
+      fetchStatsHistory();
     });
 
     return {
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter, quickDate,
-      loading, refreshInterval, collecting, collectProgress, collectResults, relogining, reloginMsg,
-      data, stats, accounts, accountOptions, accountOptionsWithPlatform, filteredVideos,
+      loading, refreshInterval, refreshing, collecting, collectProgress, collectResults, relogining, reloginMsg,
+      data, stats, accounts, accountOptions, filteredVideos, statsHistory,
       paginatedVideos, totalPages, currentPage, pageSize,
       platformLabel, accountLabel, accountIdMap, openAccount, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect, relogin, setQuickDate, fmtDelta,
-      showLoginModal, loginPlatform, loginAccount, loginAccountInput, loginBusy, loginStatus,
-      openLoginModal, closeLoginModal, doLogin, onLoginAccountChange,
       showTrendModal, trendLoading, trendMeta, trendPoints,
       showTrend, closeTrendModal, highlightPoint,
       health, fetchHealth,

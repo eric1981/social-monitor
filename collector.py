@@ -17,11 +17,14 @@ Social Monitor — 评论区账号监控采集器
 import argparse
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+import config
 
 # ── 路径 ──────────────────────────────────────────────
 MONITOR_DIR = Path(__file__).parent
@@ -29,9 +32,8 @@ DB_PATH = MONITOR_DIR / "monitor.db"
 COOKIES_DIR = MONITOR_DIR / "social-auto-upload" / "cookies"
 SOCIAL_AUTO_UPLOAD_DIR = MONITOR_DIR / "social-auto-upload"
 
-# Windows 侧脚本路径
-WIN_COLLECTOR = r"C:\Users\NINGMEI\Desktop\social-monitor\win_collector.py"
-WIN_TMP_DIR = r"C:\Users\NINGMEI\Desktop\social-monitor\tmp"
+# Windows 侧 tmp 目录（WSL mount 路径）
+WIN_TMP_WSL = config.wsl_path("tmp")
 
 
 # ── 数据库 ─────────────────────────────────────────────
@@ -118,15 +120,14 @@ def collect_douyin(conn, account):
     # 同步 cookie 到 Windows 桌面（win_collector.py 需要 Windows 侧的文件）
     src = COOKIES_DIR / f"douyin_{account_name}.json"
     if src.exists():
-        import shutil
-        win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
         win_cookies.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(src), str(win_cookies / f"douyin_{account_name}.json"))
 
     # 调用 Windows 侧采集脚本
     result = subprocess.run(
-        ['cmd.exe', '/c', 'python', WIN_COLLECTOR, account_name],
-        capture_output=True, text=False, timeout=120
+        ['cmd.exe', '/c', 'python', config.windows_script('douyin'), account_name],
+        capture_output=True, text=False, timeout=config.collect_timeout()
     )
     if result.returncode != 0:
         try:
@@ -137,7 +138,7 @@ def collect_douyin(conn, account):
         return
 
     # 读取结果文件
-    tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"{account_name}.json"
+    tmp_file = Path(WIN_TMP_WSL) / f"{account_name}.json"
     if not tmp_file.exists():
         print(f"  [抖音] {account_name} — 未生成结果文件", flush=True)
         return
@@ -223,16 +224,15 @@ def collect_kuaishou(conn, account):
     # 同步 cookie
     src = COOKIES_DIR / f"kuaishou_{account_name}.json"
     if src.exists():
-        import shutil
-        win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
         win_cookies.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(src), str(win_cookies / f"kuaishou_{account_name}.json"))
 
     result = subprocess.run(
         ['cmd.exe', '/c', 'python',
-         r'C:\Users\NINGMEI\Desktop\social-monitor\win_kuaishou.py',
+         config.windows_script('kuaishou'),
          account_name],
-        capture_output=True, text=False, timeout=120
+        capture_output=True, text=False, timeout=config.collect_timeout()
     )
     if result.returncode != 0:
         try:
@@ -242,7 +242,7 @@ def collect_kuaishou(conn, account):
         print(f"  [快手] {account_name} — 采集失败: {err}", flush=True)
         return
 
-    tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"kuaishou_{account_name}.json"
+    tmp_file = Path(WIN_TMP_WSL) / f"kuaishou_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [快手] {account_name} — 未生成结果文件", flush=True)
         return
@@ -325,9 +325,9 @@ def collect_xiaohongshu(conn, account):
 
     result = subprocess.run(
         ['cmd.exe', '/c', 'python',
-         r'C:\Users\NINGMEI\Desktop\social-monitor\win_xiaohongshu.py',
+         config.windows_script('xiaohongshu'),
          account_name],
-        capture_output=True, text=False, timeout=120
+        capture_output=True, text=False, timeout=config.collect_timeout()
     )
     if result.returncode != 0:
         try:
@@ -337,7 +337,7 @@ def collect_xiaohongshu(conn, account):
         print(f"  [小红书] {account_name} — 采集失败: {err}", flush=True)
         return
 
-    tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"xiaohongshu_{account_name}.json"
+    tmp_file = Path(WIN_TMP_WSL) / f"xiaohongshu_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [小红书] {account_name} — 未生成结果文件", flush=True)
         return
@@ -413,16 +413,15 @@ def collect_shipinhao(conn, account):
     # 同步 cookie
     src = SOCIAL_AUTO_UPLOAD_DIR / "cookies" / "tencent_uploader" / account_name
     if src.exists():
-        import shutil
-        win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies/tencent_uploader")
+        win_cookies = Path(config.wsl_path("social-auto-upload/cookies/tencent_uploader"))
         win_cookies.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(src), str(win_cookies / account_name))
 
     result = subprocess.run(
         ['cmd.exe', '/c', 'python',
-         r'C:\Users\NINGMEI\Desktop\social-monitor\win_shipinhao.py',
+         config.windows_script('shipinhao'),
          account_name],
-        capture_output=True, text=False, timeout=120
+        capture_output=True, text=False, timeout=config.collect_timeout()
     )
     if result.returncode != 0:
         try:
@@ -432,7 +431,7 @@ def collect_shipinhao(conn, account):
         print(f"  [视频号] {account_name} — 采集失败: {err}", flush=True)
         return
 
-    tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"shipinhao_{account_name}.json"
+    tmp_file = Path(WIN_TMP_WSL) / f"shipinhao_{account_name}.json"
     if not tmp_file.exists():
         print(f"  [视频号] {account_name} — 未生成结果文件", flush=True)
         return
@@ -520,12 +519,12 @@ def collect_platform(conn, platform: str, accounts):
     for acct in accounts:
         nick = acct['nickname'] or acct['account_name']
 
-        # Cookie 文件预检：超过 30 天未更新则跳过
+        # Cookie 文件预检：超过 N 天未更新则跳过
         if platform in ('douyin', 'kuaishou', 'xiaohongshu'):
             cookie_path = COOKIES_DIR / f"{platform}_{acct['account_name']}.json"
             if cookie_path.exists():
                 age_days = (datetime.now().timestamp() - cookie_path.stat().st_mtime) / 86400
-                if age_days > 30:
+                if age_days > config.collect_cookie_max_age_days():
                     print(f"  [跳过] {nick} — cookie 文件 {age_days:.0f} 天未更新，可能已失效", flush=True)
                     conn.execute('UPDATE accounts SET cookie_status=? WHERE id=?', ('failed', acct['id']))
                     conn.commit()
@@ -543,8 +542,9 @@ def collect_platform(conn, platform: str, accounts):
         except Exception as e:
             # 自动重试一次
             import time
-            print(f"  [重试] {nick} — 失败: {str(e)[:60]}，3秒后重试...", flush=True)
-            time.sleep(3)
+            delay = config.collect_retry_delay()
+            print(f"  [重试] {nick} — 失败: {str(e)[:60]}，{delay}秒后重试...", flush=True)
+            time.sleep(delay)
             try:
                 collector(conn, acct)
                 _COLLECT_RESULTS.append({'platform': platform, 'account': acct['account_name'], 'nickname': nick, 'status': 'ok'})
@@ -642,7 +642,7 @@ def main():
     print(f"\\n✅ 完成 — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
-WIN_STATS_SCRIPT = r"C:\Users\NINGMEI\Desktop\social-monitor\win_collect_stats.py"
+WIN_STATS_SCRIPT = config.windows_script('stats')
 
 
 def collect_account_stats(conn, platform, accounts):
@@ -653,21 +653,19 @@ def collect_account_stats(conn, platform, accounts):
         # 同步 cookie
         if platform == 'shipinhao':
             src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / 'tencent_uploader' / account_name
-            win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies/tencent_uploader")
+            win_cookies = Path(config.wsl_path("social-auto-upload/cookies/tencent_uploader"))
             if src.exists():
-                import shutil
                 win_cookies.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(str(src), str(win_cookies / account_name))
         else:
             src = COOKIES_DIR / f"{platform}_{account_name}.json"
             if src.exists():
-                import shutil
-                win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
                 win_cookies.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(str(src), str(win_cookies / f"{platform}_{account_name}.json"))
         result = subprocess.run(
             ['cmd.exe', '/c', 'python', WIN_STATS_SCRIPT, platform, account_name],
-            capture_output=True, text=False, timeout=120
+            capture_output=True, text=False, timeout=config.collect_timeout()
         )
         if result.returncode != 0:
             try:
@@ -681,7 +679,7 @@ def collect_account_stats(conn, platform, accounts):
                 'status': 'error', 'message': f'账号统计采集失败: {err}'
             })
             continue
-        tmp_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/tmp") / f"stats_{platform}_{account_name}.json"
+        tmp_file = Path(WIN_TMP_WSL) / f"stats_{platform}_{account_name}.json"
         if not tmp_file.exists():
             print(f"  [账号统计] {platform}/{account_name} — 未生成结果文件", flush=True)
             _COLLECT_RESULTS.append({

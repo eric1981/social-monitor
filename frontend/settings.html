@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Social Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design System ────────────────── */
+:root {
+  --primary: #ff385c;
+  --primary-active: #e00b41;
+  --primary-disabled: #ffd1da;
+  --ink: #222222;
+  --body: #3f3f3f;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --hairline: #dddddd;
+  --hairline-soft: #ebebeb;
+  --border-strong: #c1c1c1;
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
+  --on-primary: #ffffff;
+  --legal-link: #428bff;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --rounded-sm: 8px;
+  --rounded-md: 14px;
+  --rounded-lg: 20px;
+  --rounded-full: 9999px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
+  --shadow-card: rgba(0,0,0,0.06) 0 1px 3px, rgba(0,0,0,0.08) 0 2px 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--surface-soft); color: var(--ink); font-size: 14px; line-height: 1.5; }
+
+.app { max-width: 960px; margin: 0 auto; padding: var(--space-lg); }
+
+.top-nav {
+  display: flex; align-items: center; height: 56px;
+  padding: 0 var(--space-lg); margin: 0 calc(-1 * var(--space-lg));
+  border-bottom: 1px solid var(--hairline-soft); margin-bottom: var(--space-lg);
+  gap: var(--space-lg);
+}
+.top-nav .logo {
+  font-size: 18px; font-weight: 700; color: var(--primary);
+  letter-spacing: -0.3px; text-decoration: none; margin-right: var(--space-md);
+}
+.top-nav .logo span { color: var(--ink); }
+.top-nav .nav-links { display: flex; gap: var(--space-sm); flex: 1; }
+.top-nav .nav-links a {
+  text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 6px 14px; border-radius: var(--rounded-sm); transition: all 0.15s;
+}
+.top-nav .nav-links a:hover { background: var(--surface-soft); color: var(--ink); }
+.top-nav .nav-links a.active {
+  background: var(--ink); color: var(--canvas); font-weight: 600;
+}
+
+h1 { font-size: 22px; font-weight: 700; margin-bottom: var(--space-sm); }
+.page-desc { color: var(--muted); margin-bottom: var(--space-xl); font-size: 13px; }
+
+/* ── Config Sections ─────────────── */
+.config-section {
+  background: var(--canvas);
+  border-radius: var(--rounded-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-base);
+  box-shadow: var(--shadow-card);
+}
+.config-section h2 {
+  font-size: 15px; font-weight: 600; margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm); border-bottom: 1px solid var(--hairline-soft);
+}
+.form-row { display: flex; flex-wrap: wrap; gap: var(--space-base); margin-bottom: var(--space-md); }
+.form-group { flex: 1; min-width: 200px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group textarea {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--hairline); border-radius: var(--rounded-sm);
+  font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.15s;
+  background: var(--canvas);
+}
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+.form-group textarea { resize: vertical; min-height: 80px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 12px; }
+.form-group .hint { font-size: 11px; color: var(--muted-soft); margin-top: 2px; }
+
+.save-bar {
+  display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-lg);
+  padding: var(--space-base) var(--space-lg); background: var(--canvas); border-radius: var(--rounded-md);
+  box-shadow: var(--shadow-card); position: sticky; bottom: var(--space-lg);
+}
+.save-bar button {
+  padding: 10px 28px; background: var(--primary); color: var(--on-primary); border: none;
+  border-radius: var(--rounded-sm); font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.save-bar button:hover { background: var(--primary-active); }
+.save-bar button:disabled { background: var(--primary-disabled); cursor: not-allowed; }
+.save-bar .status { font-size: 13px; }
+.save-bar .status.ok { color: var(--success); }
+.save-bar .status.err { color: var(--primary); }
+
+/* domain chips */
+.domain-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.domain-chip {
+  font-size: 11px; padding: 2px 8px; background: var(--surface-strong); border-radius: var(--rounded-full);
+  color: var(--body); font-family: 'SF Mono', 'Consolas', monospace;
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="top-nav">
+    <a href="/" class="logo">📡 <span>Social Monitor</span></a>
+    <div class="nav-links">
+      <a href="/">看板</a>
+      <a href="/accounts.html">账号管理</a>
+      <a href="/settings.html" class="active">配置</a>
+    </div>
+  </nav>
+
+  <h1>⚙ 系统配置</h1>
+  <p class="page-desc">修改后点击保存。配置保存到 config.json，服务自动生效（下次启动时读取，部分配置需重启服务）。</p>
+
+  <!-- Server -->
+  <div class="config-section">
+    <h2>🖥 服务</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>端口</label>
+        <input type="number" v-model.number="cfg.server.port">
+        <div class="hint">API 服务监听端口，修改后需重启服务</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Windows Integration -->
+  <div class="config-section">
+    <h2>🪟 Windows 集成</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Windows 项目目录</label>
+        <input type="text" v-model="cfg.windows.base_dir">
+        <div class="hint">Windows 侧脚本所在根目录（C: 盘路径）</div>
+      </div>
+      <div class="form-group">
+        <label>WSL 挂载路径</label>
+        <input type="text" v-model="cfg.windows.wsl_mount_base">
+        <div class="hint">对应 /mnt/c/... 的 WSL 挂载点</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" v-for="(_, name) in cfg.windows.scripts" style="max-width:160px">
+        <label>{{ name }}</label>
+        <input type="text" v-model="cfg.windows.scripts[name]">
+        <div class="hint">{{ scriptHints[name] || '' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collect -->
+  <div class="config-section">
+    <h2>📡 采集</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cookie 过期阈值（天）</label>
+        <input type="number" v-model.number="cfg.collect.cookie_max_age_days">
+        <div class="hint">超过此天数未更新的 cookie 将被跳过</div>
+      </div>
+      <div class="form-group">
+        <label>采集超时（秒）</label>
+        <input type="number" v-model.number="cfg.collect.timeout_seconds">
+      </div>
+      <div class="form-group">
+        <label>失败重试间隔（秒）</label>
+        <input type="number" v-model.number="cfg.collect.retry_delay_seconds">
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule -->
+  <div class="config-section">
+    <h2>⏰ 定时采集</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>最大重试次数</label>
+        <input type="number" v-model.number="cfg.schedule.max_retries">
+      </div>
+      <div class="form-group">
+        <label>重试间隔（秒）</label>
+        <input type="number" v-model.number="cfg.schedule.retry_delay_seconds">
+        <div class="hint">{{ formatSeconds(cfg.schedule.retry_delay_seconds) }}</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>采集平台</label>
+        <input type="text" v-model="platformsStr" @change="syncPlatforms">
+        <div class="hint">逗号分隔：douyin, kuaishou, xiaohongshu, shipinhao</div>
+      </div>
+      <div class="form-group">
+        <label>快照保留天数</label>
+        <input type="number" v-model.number="cfg.snapshot_retention_days">
+        <div class="hint">超过此天数的快照将被 VACUUM 清理</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Proxy -->
+  <div class="config-section">
+    <h2>🖼 图片代理</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Referer</label>
+        <input type="text" v-model="cfg.image_proxy.referer">
+      </div>
+      <div class="form-group">
+        <label>User-Agent</label>
+        <input type="text" v-model="cfg.image_proxy.user_agent">
+      </div>
+      <div class="form-group" style="max-width:140px">
+        <label>缓存（秒）</label>
+        <input type="number" v-model.number="cfg.image_proxy.cache_max_age_seconds">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>允许域名（正则表达式，一行一个）</label>
+      <textarea v-model="domainsStr" @change="syncDomains" rows="4"></textarea>
+    </div>
+    <div class="domain-chips">
+      <span class="domain-chip" v-for="d in cfg.image_proxy.allowed_domains">{{ d }}</span>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <div class="save-bar">
+    <button @click="saveConfig" :disabled="saving">{{ saving ? '保存中...' : '保存配置' }}</button>
+    <span class="status" :class="statusClass">{{ statusMsg }}</span>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const cfg = ref({
+      server: { port: 5408 },
+      windows: { base_dir: '', wsl_mount_base: '', scripts: {} },
+      collect: { cookie_max_age_days: 30, timeout_seconds: 120, retry_delay_seconds: 3 },
+      schedule: { max_retries: 3, retry_delay_seconds: 3600, platforms: [] },
+      snapshot_retention_days: 90,
+      image_proxy: { referer: '', user_agent: '', cache_max_age_seconds: 86400, allowed_domains: [] },
+    });
+    const platformsStr = ref('');
+    const domainsStr = ref('');
+    const saving = ref(false);
+    const statusMsg = ref('');
+    const statusClass = ref('');
+
+    const scriptHints = {
+      douyin: '抖音采集脚本', kuaishou: '快手采集脚本',
+      xiaohongshu: '小红书采集脚本', shipinhao: '视频号采集脚本',
+      login: '扫码登录脚本', relogin: '重新登录脚本', stats: '账号统计脚本',
+    };
+
+    function formatSeconds(s) {
+      if (s < 60) return s + ' 秒';
+      if (s < 3600) return Math.floor(s / 60) + ' 分钟';
+      return Math.floor(s / 3600) + ' 小时 ' + Math.floor((s % 3600) / 60) + ' 分钟';
+    }
+
+    function syncPlatforms() {
+      cfg.value.schedule.platforms = platformsStr.value.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    function syncDomains() {
+      cfg.value.image_proxy.allowed_domains = domainsStr.value.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    async function loadConfig() {
+      try {
+        const resp = await fetch('/api/config');
+        const data = await resp.json();
+        // 深度合并——保留未返回字段的默认值
+        if (data.server) cfg.value.server = { ...cfg.value.server, ...data.server };
+        if (data.windows) {
+          cfg.value.windows = { ...cfg.value.windows, ...data.windows,
+            scripts: { ...cfg.value.windows.scripts, ...(data.windows.scripts || {}) } };
+        }
+        if (data.collect) cfg.value.collect = { ...cfg.value.collect, ...data.collect };
+        if (data.schedule) {
+          cfg.value.schedule = { ...cfg.value.schedule, ...data.schedule,
+            platforms: data.schedule.platforms || cfg.value.schedule.platforms };
+        }
+        if (data.snapshot_retention_days != null) cfg.value.snapshot_retention_days = data.snapshot_retention_days;
+        if (data.image_proxy) cfg.value.image_proxy = { ...cfg.value.image_proxy, ...data.image_proxy,
+          allowed_domains: data.image_proxy.allowed_domains || cfg.value.image_proxy.allowed_domains };
+
+        platformsStr.value = cfg.value.schedule.platforms.join(', ');
+        domainsStr.value = cfg.value.image_proxy.allowed_domains.join('\n');
+      } catch (e) {
+        statusMsg.value = '加载配置失败: ' + e.message;
+        statusClass.value = 'err';
+      }
+    }
+
+    async function saveConfig() {
+      saving.value = true;
+      statusMsg.value = '';
+      try {
+        syncPlatforms();
+        syncDomains();
+        const resp = await fetch('/api/config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg.value),
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+          statusMsg.value = '✅ 配置已保存';
+          statusClass.value = 'ok';
+        } else {
+          statusMsg.value = '❌ ' + (data.message || '保存失败');
+          statusClass.value = 'err';
+        }
+      } catch (e) {
+        statusMsg.value = '❌ ' + e.message;
+        statusClass.value = 'err';
+      } finally {
+        saving.value = false;
+        setTimeout(() => { if (statusClass.value === 'ok') statusMsg.value = ''; }, 3000);
+      }
+    }
+
+    onMounted(loadConfig);
+
+    return {
+      cfg, platformsStr, domainsStr, saving, statusMsg, statusClass,
+      scriptHints, formatSeconds, syncPlatforms, syncDomains, saveConfig,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

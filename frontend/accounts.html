@@ -9,11 +9,14 @@
 :root {
   --primary: #ff385c;
   --primary-active: #e00b41;
+  --primary-disabled: #ffd1da;
   --ink: #222222;
+  --body: #3f3f3f;
   --muted: #6a6a6a;
   --muted-soft: #929292;
   --hairline: #dddddd;
   --hairline-soft: #ebebeb;
+  --border-strong: #c1c1c1;
   --canvas: #ffffff;
   --surface-soft: #f7f7f7;
   --surface-strong: #f2f2f2;
@@ -21,6 +24,7 @@
   --legal-link: #428bff;
   --rounded-sm: 8px;
   --rounded-md: 14px;
+  --rounded-lg: 20px;
   --rounded-full: 9999px;
   --space-xs: 4px;
   --space-sm: 8px;
@@ -29,7 +33,7 @@
   --space-lg: 24px;
   --space-xl: 32px;
   --space-xxl: 48px;
-  --font: 'Inter', -apple-system, system-ui, sans-serif;
+  --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
   --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
   --card-radius: 16px;
 }
@@ -42,15 +46,25 @@ body {
 
 /* Top Nav */
 .top-nav {
-  display: flex; align-items: center; height: 64px;
-  border-bottom: 1px solid var(--hairline-soft);
-  margin-bottom: var(--space-xl); gap: var(--space-lg);
+  display: flex; align-items: center; height: 56px;
+  padding: 0 var(--space-lg); margin: 0 calc(-1 * var(--space-lg));
+  border-bottom: 1px solid var(--hairline-soft); margin-bottom: var(--space-lg);
+  gap: var(--space-lg);
 }
-.top-nav .logo { font-size: 20px; font-weight: 600; color: var(--primary); }
-.top-nav .logo a { text-decoration: none; color: inherit; }
+.top-nav .logo {
+  font-size: 18px; font-weight: 700; color: var(--primary);
+  letter-spacing: -0.3px; text-decoration: none; margin-right: var(--space-md);
+}
 .top-nav .logo span { color: var(--ink); }
-.top-nav .back-link { font-size: 14px; color: var(--legal-link); text-decoration: none; margin-left: auto; }
-.top-nav .back-link:hover { text-decoration: underline; }
+.top-nav .nav-links { display: flex; gap: var(--space-sm); flex: 1; }
+.top-nav .nav-links a {
+  text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 6px 14px; border-radius: var(--rounded-sm); transition: all 0.15s;
+}
+.top-nav .nav-links a:hover { background: var(--surface-soft); color: var(--ink); }
+.top-nav .nav-links a.active {
+  background: var(--ink); color: var(--canvas); font-weight: 600;
+}
 
 /* Comparison Table */
 .compare-section { margin-bottom: var(--space-xl); }
@@ -217,13 +231,118 @@ body {
   .app { padding: var(--space-base); }
   .card-grid { grid-template-columns: 1fr; }
 }
+
+/* Relogin button on card */
+.cookie-relogin-btn {
+  font-size: 11px; color: var(--primary); cursor: pointer;
+  padding: 2px 8px; border-radius: var(--rounded-sm);
+}
+.cookie-relogin-btn:hover { background: var(--surface-soft); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.modal {
+  background: var(--canvas); border-radius: var(--rounded-md);
+  width: 420px; max-width: 90vw; box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-lg); border-bottom: 1px solid var(--hairline-soft);
+}
+.modal-header h2 { font-size: 18px; font-weight: 600; }
+.modal-close {
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  color: var(--muted); padding: 4px 8px; border-radius: var(--rounded-sm);
+}
+.modal-close:hover { background: var(--surface-soft); }
+.modal-body { padding: var(--space-lg); }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: var(--space-sm);
+  padding: var(--space-base) var(--space-lg); border-top: 1px solid var(--hairline-soft);
+}
+.form-group { margin-bottom: var(--space-base); }
+.form-label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: var(--space-xs);
+}
+.form-input, .form-select {
+  width: 100%; height: 44px; padding: 0 12px;
+  border: 1px solid var(--hairline); border-radius: var(--rounded-sm);
+  font-size: 14px; font-family: var(--font); color: var(--ink);
+  background: var(--canvas); outline: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--ink); }
+.form-hint { font-size: 12px; color: var(--muted-soft); margin-top: 4px; }
+.form-status {
+  padding: 10px 12px; border-radius: var(--rounded-sm);
+  background: var(--surface-soft); font-size: 13px; color: var(--ink);
+}
+.form-status.error { background: #fff0f0; color: var(--primary); }
+.btn {
+  height: 40px; padding: 0 20px; border-radius: var(--rounded-sm);
+  font-size: 14px; font-weight: 500; font-family: var(--font);
+  border: 1px solid transparent; cursor: pointer; display: inline-flex;
+  align-items: center; gap: 6px;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: var(--on-primary); border: none; }
+.btn-primary:hover { background: var(--primary-active); }
+.btn-secondary { background: var(--canvas); color: var(--ink); border-color: var(--hairline); }
+.btn-secondary:hover { border-color: var(--ink); }
+.spinner-sm {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+/* Relogin banner */
+.relogin-banner {
+  background: #fff8f0; border: 1px solid #ffd43b; border-radius: var(--rounded-md);
+  padding: var(--space-md) var(--space-base); margin-bottom: var(--space-lg);
+  font-size: 14px; color: var(--ink); display: flex; align-items: center; gap: var(--space-sm);
+}
+
+/* Group Management */
+.group-manager { display: flex; gap: var(--space-lg); min-height: 380px; }
+.group-manager .gm-side { flex: 1; border: 1px solid var(--hairline-soft); border-radius: var(--rounded-md); overflow: hidden; display: flex; flex-direction: column; }
+.gm-side .gm-title { font-size: 13px; font-weight: 600; padding: var(--space-sm) var(--space-base); background: var(--surface-soft); border-bottom: 1px solid var(--hairline-soft); }
+.gm-side .gm-list { flex: 1; overflow-y: auto; padding: var(--space-sm); }
+.gm-group-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-radius: var(--rounded-sm); cursor: pointer;
+  margin-bottom: 2px; font-size: 13px;
+}
+.gm-group-item:hover { background: var(--surface-soft); }
+.gm-group-item.active { background: var(--surface-strong); font-weight: 600; }
+.gm-group-item .gm-count { font-size: 11px; color: var(--muted-soft); }
+.gm-member-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; border-radius: var(--rounded-sm); margin-bottom: 2px;
+  font-size: 13px; background: var(--surface-soft);
+}
+.gm-member-item .gm-platform { font-size: 11px; color: var(--muted-soft); min-width: 44px; }
+.gm-member-item .gm-remove { font-size: 11px; color: var(--primary); cursor: pointer; padding: 2px 6px; border-radius: var(--rounded-sm); }
+.gm-member-item .gm-remove:hover { background: #ffe3e3; }
+.gm-add-btn { font-size: 12px; color: var(--legal-link); cursor: pointer; padding: 4px 0; }
+.gm-add-btn:hover { text-decoration: underline; }
+.gm-create-row { display: flex; gap: var(--space-sm); padding: var(--space-sm) var(--space-base); border-bottom: 1px solid var(--hairline-soft); }
+.gm-create-row input { flex: 1; height: 34px; padding: 0 10px; border: 1px solid var(--hairline); border-radius: var(--rounded-sm); font-size: 13px; font-family: var(--font); outline: none; }
+.gm-create-row input:focus { border-color: var(--ink); }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <nav class="top-nav">
-    <div class="logo"><a href="/">📡 <span>Social Monitor</span></a></div>
-    <a href="/" class="back-link">← 返回首页</a>
+    <a href="/" class="logo">📡 <span>Social Monitor</span></a>
+    <div class="nav-links">
+      <a href="/">看板</a>
+      <a href="/accounts.html" class="active">账号管理</a>
+      <a href="/settings.html">配置</a>
+    </div>
   </nav>
 
   <div v-if="loading" class="loading">
@@ -234,16 +353,20 @@ body {
   <template v-else>
     <!-- Page Header -->
     <div class="page-header">
-      <h2>👤 账号列表</h2>
-      <span class="count-badge">{{ accounts.length }} 个账号</span>
+      <h2>👤 账号管理</h2>
+      <div style="display:flex;gap:var(--space-sm);align-items:center;">
+        <span class="count-badge">{{ accounts.length }} 个账号</span>
+        <button class="btn btn-primary" @click="openLoginModal">+ 新增账号</button>
+        <button class="btn btn-secondary" @click="openGroupModal">📋 分组管理</button>
+      </div>
     </div>
 
     <!-- Cross-Platform Comparison -->
     <div v-if="compareGroups.length" class="compare-section">
       <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📊 跨平台对比</h3>
       <div class="compare-table">
-        <div v-for="g in compareGroups" :key="g.account_name" class="compare-row">
-          <div class="compare-name">{{ nickForGroup(g) }}</div>
+        <div v-for="g in compareGroups" :key="g.id" class="compare-row">
+          <div class="compare-name">{{ g.label }}</div>
           <div class="compare-cells">
             <span v-for="(p, plat) in g.platforms" :key="plat" class="compare-cell" :class="p.cookie_status">
               <span class="cc-platform">{{ plat === 'douyin' ? '抖音' : plat === 'kuaishou' ? '快手' : plat === 'xiaohongshu' ? '小红书' : '视频号' }}</span>
@@ -256,6 +379,10 @@ body {
     </div>
 
     <!-- Cards Grid -->
+    <div v-if="relogining" class="relogin-banner">
+      <span class="spinner-sm" style="border-color:rgba(255,56,92,0.3);border-top-color:#ff385c;flex-shrink:0;"></span>
+      {{ reloginMsg }}
+    </div>
     <div class="card-grid">
       <a v-for="a in accounts" :key="a.id"
          :href="'/account.html?id=' + a.id"
@@ -315,7 +442,7 @@ body {
             📅 {{ fmtDate(a.account_stats_updated) }}
           </span>
           <span class="updated-at" v-else>—</span>
-          <span v-if="a.cookie_status === 'failed'" style="font-size:11px;color:var(--primary);cursor:pointer;margin-left:8px;" @click.prevent="window.open('/','_self')">🔄 登录</span>
+          <span v-if="a.cookie_status === 'failed'" class="cookie-relogin-btn" @click.prevent="reloginAccount(a)">🔄 重新扫码</span>
           <span class="view-hint">查看详情 →</span>
         </div>
       </a>
@@ -326,6 +453,99 @@ body {
       <div>暂无账号数据</div>
     </div>
   </template>
+
+  <!-- Login Modal -->
+  <div v-if="showLoginModal" class="modal-overlay" @click.self="closeLoginModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>新增账号 / 重新扫码</h2>
+      <button class="modal-close" @click="closeLoginModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">平台</label>
+        <select v-model="loginPlatform" class="form-select">
+          <option value="douyin">抖音</option>
+          <option value="kuaishou">快手</option>
+          <option value="xiaohongshu">小红书</option>
+          <option value="shipinhao">视频号</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">已有账号（选填）</label>
+        <select v-model="loginAccountKey" class="form-select" @change="onLoginAccountChange">
+          <option value="">— 手动输入新账号名 —</option>
+          <option v-for="a in accounts" :key="a.platform+':'+a.account_name" :value="a.platform+':'+a.account_name">{{ platformLabels[a.platform] }}：{{ a.nickname || a.account_name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">或输入新账号名</label>
+        <input v-model="loginAccountInput" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
+        <div class="form-hint">已有账号从下拉选择，新账号手动输入</div>
+      </div>
+      <div v-if="loginStatus" class="form-status" :class="{error: loginStatus.includes('失败') || loginStatus.includes('超时')}">
+        {{ loginStatus }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy">取消</button>
+      <button class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccountFinal">
+        <span v-if="loginBusy" class="spinner-sm"></span>
+        <span v-else>打开浏览器扫码</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Group Management Modal -->
+<div v-if="showGroupModal" class="modal-overlay" @click.self="closeGroupModal">
+  <div class="modal" style="width:680px;max-width:92vw;">
+    <div class="modal-header">
+      <h2>📋 跨平台分组管理</h2>
+      <button class="modal-close" @click="closeGroupModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="group-manager">
+        <!-- 左侧：分组列表 -->
+        <div class="gm-side">
+          <div class="gm-title">分组</div>
+          <div class="gm-create-row">
+            <input v-model="newGroupName" placeholder="输入分组名称..." @keyup.enter="createGroup">
+            <button class="btn btn-primary" style="height:34px;padding:0 14px;font-size:13px;" @click="createGroup" :disabled="!newGroupName.trim()">新建</button>
+          </div>
+          <div class="gm-list">
+            <div v-for="g in groupData.groups" :key="g.id" class="gm-group-item" :class="{active: selectedGroup && selectedGroup.id === g.id}" @click="selectGroup(g)">
+              <span>{{ g.name }}</span>
+              <span class="gm-count">{{ g.members.length }} 个账号</span>
+            </div>
+            <div v-if="!groupData.groups.length" style="text-align:center;padding:20px;color:var(--muted-soft);font-size:13px;">暂无分组</div>
+          </div>
+        </div>
+        <!-- 右侧：成员 / 未分组账号 -->
+        <div class="gm-side">
+          <div class="gm-title">{{ selectedGroup ? selectedGroup.name : '未分组账号' }}</div>
+          <div class="gm-list">
+            <template v-if="selectedGroup">
+              <div v-for="m in selectedGroup.members" :key="m.id" class="gm-member-item">
+                <span><span class="gm-platform">{{ platLabel(m.platform) }}</span>{{ m.nickname || m.account_name }}</span>
+                <span class="gm-remove" @click="removeMember(m)">移出</span>
+              </div>
+              <div v-if="!selectedGroup.members.length" style="text-align:center;padding:20px;color:var(--muted-soft);font-size:13px;">空分组，从右侧加入账号</div>
+            </template>
+            <div v-for="u in ungroupedList" :key="u.id" class="gm-member-item">
+              <span><span class="gm-platform">{{ platLabel(u.platform) }}</span>{{ u.nickname || u.account_name }}</span>
+              <span class="gm-add-btn" v-if="selectedGroup" @click="addMember(u)">+ 加入</span>
+              <span v-else style="font-size:11px;color:var(--muted-soft);">未分组</span>
+            </div>
+            <div v-if="!ungroupedList.length && !selectedGroup" style="text-align:center;padding:20px;color:var(--muted-soft);font-size:13px;">全部已分组</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="closeGroupModal">关闭</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -338,7 +558,210 @@ createApp({
     const loading = ref(true);
     const compareGroups = ref([]);
 
+    /* ── Login / Relogin State ── */
+    const showLoginModal = ref(false);
+    const loginPlatform = ref('douyin');
+    const loginAccountKey = ref('');
+    const loginAccountInput = ref('');
+    const loginBusy = ref(false);
+    const loginStatus = ref('');
+    const relogining = ref(false);
+    const reloginMsg = ref('');
+
+    /* ── Group Management State ── */
+    const showGroupModal = ref(false);
+    const groupData = ref({ groups: [], ungrouped: [] });
+    const selectedGroup = ref(null);
+    const newGroupName = ref('');
+
+    const ungroupedList = computed(() => {
+      if (selectedGroup.value) {
+        // 显示未分组的 + 当前分组以外的成员（防止重复加入）
+        return groupData.value.ungrouped;
+      }
+      return groupData.value.ungrouped;
+    });
+
+    const loginAccountFinal = computed(() => {
+      if (loginAccountKey.value) {
+        const parts = loginAccountKey.value.split(':');
+        return parts[1] || '';
+      }
+      return loginAccountInput.value.trim();
+    });
+
     const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
+
+    function platLabel(p) { return platformLabels[p] || p; }
+
+    /* ── Group Management ── */
+    function openGroupModal() {
+      showGroupModal.value = true;
+      selectedGroup.value = null;
+      newGroupName.value = '';
+      fetchGroups();
+    }
+
+    function closeGroupModal() {
+      showGroupModal.value = false;
+      selectedGroup.value = null;
+      // 关闭后刷新账号列表和跨平台对比
+      fetchAccounts();
+    }
+
+    async function fetchGroups() {
+      try {
+        const resp = await fetch('/api/groups');
+        const d = await resp.json();
+        groupData.value = d;
+      } catch(e) {}
+    }
+
+    function selectGroup(g) {
+      selectedGroup.value = g;
+    }
+
+    async function createGroup() {
+      const name = newGroupName.value.trim();
+      if (!name) return;
+      try {
+        await fetch('/api/groups', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'create', name }),
+        });
+        newGroupName.value = '';
+        await fetchGroups();
+      } catch(e) {}
+    }
+
+    async function addMember(account) {
+      if (!selectedGroup.value) return;
+      try {
+        await fetch('/api/groups', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'add_member', group_id: selectedGroup.value.id, account_id: account.id }),
+        });
+        await fetchGroups();
+      } catch(e) {}
+    }
+
+    async function removeMember(member) {
+      try {
+        await fetch('/api/groups', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'remove_member', account_id: member.id }),
+        });
+        if (selectedGroup.value) {
+          selectedGroup.value.members = selectedGroup.value.members.filter(m => m.id !== member.id);
+        }
+        await fetchGroups();
+      } catch(e) {}
+    }
+
+    /* ── Login Modal ── */
+    function openLoginModal() {
+      showLoginModal.value = true;
+      loginPlatform.value = 'douyin';
+      loginAccountKey.value = '';
+      loginAccountInput.value = '';
+      loginStatus.value = '';
+      loginBusy.value = false;
+    }
+
+    function closeLoginModal() {
+      showLoginModal.value = false;
+    }
+
+    function onLoginAccountChange() {
+      if (!loginAccountKey.value) return;
+      const parts = loginAccountKey.value.split(':');
+      const platform = parts[0];
+      if (platform && platformLabels[platform]) {
+        loginPlatform.value = platform;
+      }
+    }
+
+    async function doLogin() {
+      const account = loginAccountFinal.value;
+      if (!account) {
+        loginStatus.value = '请选择已有账号或输入新账号名';
+        return;
+      }
+      loginBusy.value = true;
+      loginStatus.value = '正在打开扫码窗口...';
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            platform: loginPlatform.value,
+            account_name: account,
+          }),
+        });
+        const result = await resp.json();
+        if (result.status === 'ok') {
+          loginStatus.value = '✅ 扫码窗口已打开，请在 Windows 上扫码登录';
+          setTimeout(() => { closeLoginModal(); loginBusy.value = false; }, 2000);
+          fetchAccounts();
+        } else {
+          loginStatus.value = result.message || '请求失败';
+          loginBusy.value = false;
+        }
+      } catch (e) {
+        loginStatus.value = '请求失败: ' + e.message;
+        loginBusy.value = false;
+      }
+    }
+
+    /* ── Relogin (from failed cookie card) ── */
+    async function reloginAccount(a) {
+      relogining.value = true;
+      reloginMsg.value = '正在打开浏览器扫码登录 ' + platformLabels[a.platform] + '/' + (a.nickname || a.account_name) + '...';
+      try {
+        const resp = await fetch('/api/relogin/' + a.platform + '/' + a.account_name, { method: 'POST' });
+        const d = await resp.json();
+        if (d.status !== 'ok') {
+          reloginMsg.value = '启动失败: ' + (d.message || '');
+          setTimeout(() => { relogining.value = false; }, 3000);
+          return;
+        }
+        const ci = setInterval(async () => {
+          try {
+            const r = await fetch('/api/relogin/status');
+            const st = await r.json();
+            if (st.status === 'success') {
+              reloginMsg.value = '✅ 扫码登录成功！';
+              clearInterval(ci);
+              setTimeout(() => { relogining.value = false; }, 3000);
+              fetchAccounts();
+            } else if (st.status === 'running') {
+              reloginMsg.value = st.message || '等待扫码...';
+            } else {
+              reloginMsg.value = '状态: ' + (st.message || '');
+            }
+          } catch(e) {}
+        }, 1500);
+      } catch (e) {
+        reloginMsg.value = '启动失败: ' + e.message;
+        setTimeout(() => { relogining.value = false; }, 3000);
+      }
+    }
+
+    async function fetchAccounts() {
+      try {
+        const resp = await fetch('/api/accounts');
+        const d = await resp.json();
+        accounts.value = d.accounts || [];
+        loadCompare();
+      } catch (e) {
+        console.error('Failed:', e);
+      } finally {
+        loading.value = false;
+      }
+    }
 
     function platformColor(p) {
       const colors = {
@@ -366,7 +789,6 @@ createApp({
     }
 
     function nickForGroup(g) {
-      // 取第一个有昵称的平台昵称，否则用 account_name
       for (const p of Object.values(g.platforms || {})) {
         if (p.nickname) return p.nickname;
       }
@@ -382,24 +804,9 @@ createApp({
 
     function fmtDate(t) {
       if (!t) return '';
-      // t format: "2026-06-09 06:00:00"
       const d = t.slice(5, 16).replace(' ', ' ');
       return d;
     }
-
-    onMounted(async () => {
-      try {
-        const resp = await fetch('/api/accounts');
-        const d = await resp.json();
-        accounts.value = d.accounts || [];
-        // 加载跨平台对比
-        loadCompare();
-      } catch (e) {
-        console.error('Failed:', e);
-      } finally {
-        loading.value = false;
-      }
-    });
 
     async function loadCompare() {
       try {
@@ -409,10 +816,22 @@ createApp({
       } catch(e) {}
     }
 
+    onMounted(fetchAccounts);
+
     return {
       accounts, loading, compareGroups,
-      platformColor, platformIcon, cookieLabel, nickForGroup,
-      fmtNum, fmtDate,
+      platformLabels, platformColor, platformIcon, cookieLabel,
+      fmtNum, fmtDate, platLabel,
+      /* Login */
+      showLoginModal, loginPlatform, loginAccountKey, loginAccountInput,
+      loginBusy, loginStatus, loginAccountFinal,
+      openLoginModal, closeLoginModal, onLoginAccountChange, doLogin,
+      /* Relogin */
+      relogining, reloginMsg, reloginAccount,
+      /* Group Management */
+      showGroupModal, groupData, selectedGroup, newGroupName, ungroupedList,
+      openGroupModal, closeGroupModal, selectGroup, createGroup,
+      addMember, removeMember,
     };
   }
 }).mount('#app');

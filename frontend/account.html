@@ -9,12 +9,14 @@
 :root {
   --primary: #ff385c;
   --primary-active: #e00b41;
+  --primary-disabled: #ffd1da;
   --ink: #222222;
   --body: #3f3f3f;
   --muted: #6a6a6a;
   --muted-soft: #929292;
   --hairline: #dddddd;
   --hairline-soft: #ebebeb;
+  --border-strong: #c1c1c1;
   --canvas: #ffffff;
   --surface-soft: #f7f7f7;
   --surface-strong: #f2f2f2;
@@ -31,7 +33,7 @@
   --space-lg: 24px;
   --space-xl: 32px;
   --space-xxl: 48px;
-  --font: 'Inter', -apple-system, system-ui, sans-serif;
+  --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
   --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,21 +48,34 @@ body {
 
 /* Top Nav */
 .top-nav {
-  display: flex; align-items: center; height: 64px;
-  border-bottom: 1px solid var(--hairline-soft);
-  margin-bottom: var(--space-xl); gap: var(--space-lg);
+  display: flex; align-items: center; height: 56px;
+  padding: 0 var(--space-lg); margin: 0 calc(-1 * var(--space-lg));
+  border-bottom: 1px solid var(--hairline-soft); margin-bottom: var(--space-lg);
+  gap: var(--space-lg);
 }
 .top-nav .logo {
-  font-size: 20px; font-weight: 600; color: var(--primary);
-  letter-spacing: -0.3px;
+  font-size: 18px; font-weight: 700; color: var(--primary);
+  letter-spacing: -0.3px; text-decoration: none; margin-right: var(--space-md);
 }
-.top-nav .logo a { text-decoration: none; color: inherit; }
 .top-nav .logo span { color: var(--ink); }
-.top-nav .back-link {
-  font-size: 14px; color: var(--legal-link); text-decoration: none;
-  margin-left: auto;
+.top-nav .nav-links { display: flex; gap: var(--space-sm); flex: 1; }
+.top-nav .nav-links a {
+  text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 6px 14px; border-radius: var(--rounded-sm); transition: all 0.15s;
 }
-.top-nav .back-link:hover { text-decoration: underline; }
+.top-nav .nav-links a:hover { background: var(--surface-soft); color: var(--ink); }
+.top-nav .nav-links a.active {
+  background: var(--ink); color: var(--canvas); font-weight: 600;
+}
+
+/* Page Actions */
+.page-actions {
+  display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);
+}
+.action-link {
+  font-size: 12px; color: var(--muted); text-decoration: none;
+}
+.action-link:hover { color: var(--ink); }
 
 /* Profile Header */
 .profile-header {
@@ -131,6 +146,8 @@ body {
 }
 .card-cover { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface-soft); }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-link { text-decoration: none; color: inherit; display: block; }
+.card-link:hover .card { box-shadow: var(--shadow-card); border-color: var(--hairline); }
 .card-header {
   padding: var(--space-base) var(--space-base) var(--space-sm);
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -146,7 +163,7 @@ body {
   padding-top: var(--space-sm); border-top: 1px solid var(--hairline-soft);
 }
 .stat-item { text-align: center; }
-.stat-item .num { font-size: 15px; font-weight: 600; }
+.stat-item .num { font-size: 16px; font-weight: 600; }
 .stat-item .label { font-size: 11px; color: var(--muted-soft); text-transform: uppercase; letter-spacing: 0.2px; }
 .card-time { font-size: 12px; color: var(--muted-soft); padding: var(--space-sm) var(--space-base) var(--space-base); }
 
@@ -190,15 +207,22 @@ body {
 <div class="app" id="app">
   <!-- Top Nav -->
   <nav class="top-nav">
-    <div class="logo"><a href="/">📡 <span>Social Monitor</span></a></div>
-    <button class="collect-stats-btn" @click="collectStats" :disabled="collecting">
-      <span v-if="collecting" class="spinner-sm"></span>
+    <a href="/" class="logo">📡 <span>Social Monitor</span></a>
+    <div class="nav-links">
+      <a href="/">看板</a>
+      <a href="/accounts.html">账号管理</a>
+      <a href="/settings.html">配置</a>
+    </div>
+  </nav>
+
+  <!-- Page Actions -->
+  <div v-if="data" class="page-actions">
+    <button class="btn btn-primary" @click="collectStats" :disabled="collecting" style="font-size:13px;padding:8px 18px;">
+      <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:12px;height:12px;border-width:2px;vertical-align:-2px;margin-right:6px;"></span>
       <span v-else>📊</span> 采集账号统计
     </button>
-    <a href="/" class="back-link" style="margin-left:auto;">← 返回首页</a>
-    <a href="/accounts.html" class="back-link">账号列表</a>
-    <a :href="'/api/export/videos?account_id=' + accountId" style="margin-left:12px;font-size:12px;color:var(--muted);text-decoration:none;opacity:0.5;" title="导出此账号视频CSV">📥 导出视频</a>
-  </nav>
+    <a :href="'/api/export/videos?account_id=' + accountId" class="action-link">📥 导出视频</a>
+  </div>
 
   <!-- Profile Header -->
   <div v-if="loading" class="loading">
@@ -287,7 +311,7 @@ body {
     <div v-else class="card-grid">
       <a v-for="v in paginatedVideos" :key="v.aweme_id"
          :href="v.url || '#'" target="_blank" rel="noopener"
-         style="text-decoration:none;color:inherit;display:block">
+         class="card-link">
         <div class="card">
           <div class="card-cover" v-if="v.cover_url">
             <img :src="v.cover_url" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous"

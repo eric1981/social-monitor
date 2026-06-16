@@ -1,0 +1,58 @@
+{
+  "server": {
+    "port": 5408
+  },
+  "windows": {
+    "base_dir": "C:\\Users\\NINGMEI\\Desktop\\social-monitor",
+    "wsl_mount_base": "/mnt/c/Users/NINGMEI/Desktop/social-monitor",
+    "scripts": {
+      "douyin": "win_collector.py",
+      "kuaishou": "win_kuaishou.py",
+      "xiaohongshu": "win_xiaohongshu.py",
+      "shipinhao": "win_shipinhao.py",
+      "login": "win_login.py",
+      "relogin": "win_relogin.py",
+      "stats": "win_collect_stats.py"
+    }
+  },
+  "collect": {
+    "cookie_max_age_days": 30,
+    "timeout_seconds": 120,
+    "retry_delay_seconds": 3
+  },
+  "schedule": {
+    "max_retries": 3,
+    "retry_delay_seconds": 3600,
+    "platforms": [
+      "douyin",
+      "kuaishou",
+      "xiaohongshu",
+      "shipinhao"
+    ]
+  },
+  "snapshot_retention_days": 90,
+  "image_proxy": {
+    "referer": "https://www.kuaishou.com/",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "cache_max_age_seconds": 86400,
+    "allowed_domains": [
+      ".*\\.douyinpic\\.com$",
+      ".*\\.douyinvod\\.com$",
+      ".*\\.douyin\\.com$",
+      ".*\\.snssdk\\.com$",
+      ".*\\.byteimg\\.com$",
+      ".*\\.bytecdn\\.com$",
+      ".*\\.yximgs\\.com$",
+      ".*\\.kuaishou\\.com$",
+      ".*\\.kuaishou\\.net$",
+      ".*\\.xhscdn\\.com$",
+      ".*\\.xiaohongshu\\.com$",
+      ".*\\.xhs\\.nuomi\\.com$",
+      ".*\\.wx\\.qlogo\\.cn$",
+      ".*\\.qq\\.com$",
+      ".*\\.gtimg\\.com$",
+      ".*\\.weixin\\.qq\\.com$",
+      ".*\\.qpic\\.cn$"
+    ]
+  }
+}

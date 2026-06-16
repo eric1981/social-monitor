@@ -5,20 +5,77 @@ Social Monitor — 轻量 API 服务
 """
 
 import json
+import shutil
 import sqlite3
 import subprocess
 import sys
+import ipaddress
+import socket
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
+
+import config
 
 MONITOR_DIR = Path(__file__).parent
 DB_PATH = MONITOR_DIR / "monitor.db"
 FRONTEND_DIR = MONITOR_DIR / "frontend"
 COLLECTOR = MONITOR_DIR / "collector.py"
-PORT = 5408
+
+
+def is_safe_image_url(raw_url: str) -> bool:
+    """检查图片代理 URL 是否安全（防 SSRF）"""
+    try:
+        u = urlparse(raw_url)
+    except Exception:
+        return False
+
+    # 仅允许 http/https
+    if u.scheme not in ('http', 'https'):
+        return False
+    if not u.hostname:
+        return False
+
+    # 阻止裸 IP 和内网地址
+    hostname = u.hostname.strip('[]')
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        pass  # 是域名，通过 DNS 进一步检查
+    else:
+        if addr.is_loopback or addr.is_private or addr.is_link_local:
+            return False
+
+    # DNS 解析后再次检查（防 DNS rebinding 绕过 hostname 检查）
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in resolved:
+            ip = sockaddr[0]
+            try:
+                a = ipaddress.ip_address(ip)
+                if a.is_loopback or a.is_private or a.is_link_local:
+                    return False
+            except ValueError:
+                continue
+    except socket.gaierror:
+        return False
+
+    # 域名白名单（来自配置文件）
+    for pat in config.image_proxy_allowed_patterns():
+        if pat.match(hostname):
+            return True
+    return False
+
+
+def csv_quote(val):
+    """将值转为 CSV 安全格式：必要时加双引号包裹，内嵌引号转义"""
+    s = str(val or '')
+    if ',' in s or '"' in s or '\n' in s or '\r' in s:
+        s = s.replace('"', '""')
+        return f'"{s}"'
+    return s
 
 
 def get_db():
@@ -146,6 +203,24 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 json_response(self, {'error': str(e)}, 500)
 
+        elif parsed.path == '/api/stats/history':
+            try:
+                conn = get_db()
+                rows = conn.execute('''
+                    SELECT DATE(s.collected_at) as d,
+                           COUNT(DISTINCT s.video_id) as videos,
+                           COUNT(*) as snapshots,
+                           SUM(s.play_count) as total_play
+                    FROM snapshots s
+                    GROUP BY DATE(s.collected_at)
+                    ORDER BY d
+                ''').fetchall()
+                conn.close()
+                points = [{'date': r['d'], 'videos': r['videos'], 'snapshots': r['snapshots'], 'play': r['total_play']} for r in rows]
+                json_response(self, {'points': points})
+            except Exception as e:
+                json_response(self, {'error': str(e)}, 500)
+
         elif parsed.path == '/api/accounts':
             conn = get_db()
             accounts = [
@@ -182,24 +257,55 @@ class Handler(BaseHTTPRequestHandler):
 
         elif parsed.path == '/api/compare':
             conn = get_db()
+            # 按 group_id 分组，未分组的按 account_name 单列
             rows = conn.execute("""
-                SELECT account_name, platform, nickname, cookie_status,
-                       follower_count, total_digg_count, total_play_count
-                FROM accounts WHERE is_active=1
-                ORDER BY account_name, platform
+                SELECT a.id, a.account_name, a.platform, a.nickname, a.cookie_status,
+                       a.follower_count, a.total_digg_count, a.total_play_count,
+                       a.group_id, g.group_name
+                FROM accounts a
+                LEFT JOIN groups g ON g.id = a.group_id
+                WHERE a.is_active=1
+                ORDER BY COALESCE(g.group_name, a.account_name), a.platform
             """).fetchall()
             conn.close()
             groups = {}
             for r in rows:
-                name = r['account_name']
-                if name not in groups:
-                    groups[name] = {'account_name': name, 'platforms': {}}
-                groups[name]['platforms'][r['platform']] = {
+                if r['group_id']:
+                    key = 'g:' + str(r['group_id'])
+                    label = r['group_name'] or f'分组{r["group_id"]}'
+                else:
+                    key = 'u:' + r['account_name']
+                    label = r['nickname'] or r['account_name']
+                if key not in groups:
+                    groups[key] = {'id': key, 'label': label, 'platforms': {}}
+                groups[key]['platforms'][r['platform']] = {
                     'nickname': r['nickname'], 'cookie_status': r['cookie_status'],
                     'followers': r['follower_count'], 'diggs': r['total_digg_count'],
-                    'plays': r['total_play_count']
+                    'plays': r['total_play_count'],
+                    'account_name': r['account_name'],
                 }
             json_response(self, {'groups': list(groups.values())})
+
+        elif parsed.path == '/api/groups':
+            conn = get_db()
+            gs = conn.execute('SELECT * FROM groups ORDER BY group_name').fetchall()
+            result = []
+            for g in gs:
+                members = conn.execute(
+                    'SELECT id, platform, account_name, nickname FROM accounts WHERE group_id=? ORDER BY platform',
+                    (g['id'],)
+                ).fetchall()
+                result.append({
+                    'id': g['id'],
+                    'name': g['group_name'],
+                    'members': [dict(m) for m in members],
+                })
+            # 未分组账号
+            ungrouped = conn.execute(
+                'SELECT id, platform, account_name, nickname FROM accounts WHERE is_active=1 AND group_id IS NULL ORDER BY platform, account_name'
+            ).fetchall()
+            conn.close()
+            json_response(self, {'groups': result, 'ungrouped': [dict(u) for u in ungrouped]})
 
         elif parsed.path == '/api/collect/stats':
             # 触发采集账号统计数据
@@ -382,7 +488,7 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
             csv = '平台,账号名,昵称,Cookie状态,粉丝,获赞,播放,统计更新时间\n'
             for r in rows:
-                csv += f'{r["platform"]},{r["account_name"]},{r["nickname"] or ""},{r["cookie_status"]},{r["follower_count"] or 0},{r["total_digg_count"] or 0},{r["total_play_count"] or 0},{r["account_stats_updated"] or ""}\n'
+                csv += f'{r["platform"]},{csv_quote(r["account_name"])},{csv_quote(r["nickname"])},{r["cookie_status"]},{r["follower_count"] or 0},{r["total_digg_count"] or 0},{r["total_play_count"] or 0},{r["account_stats_updated"] or ""}\n'
             self.send_response(200)
             self.send_header('Content-Type', 'text/csv; charset=utf-8-sig')
             self.send_header('Content-Disposition', 'attachment; filename=social-monitor-accounts.csv')
@@ -409,8 +515,7 @@ class Handler(BaseHTTPRequestHandler):
             conn.close()
             csv = '平台,账号,标题,视频ID,发布时间,播放,点赞,评论,分享,收藏,采集时间\n'
             for r in rows:
-                title = (r['title'] or '').replace(',', '，').replace('\n', ' ')
-                csv += f'{r["platform"]},{r["account_name"]},{title},{r["aweme_id"]},{r["first_seen"] or ""},{r["play_count"]},{r["digg_count"]},{r["comment_count"]},{r["share_count"]},{r["collect_count"]},{r["collected_at"]}\n'
+                csv += f'{r["platform"]},{csv_quote(r["account_name"])},{csv_quote(r["title"])},{r["aweme_id"]},{r["first_seen"] or ""},{r["play_count"]},{r["digg_count"]},{r["comment_count"]},{r["share_count"]},{r["collect_count"]},{r["collected_at"]}\n'
             self.send_response(200)
             self.send_header('Content-Type', 'text/csv; charset=utf-8-sig')
             self.send_header('Content-Disposition', 'attachment; filename=social-monitor-videos.csv')
@@ -424,10 +529,13 @@ class Handler(BaseHTTPRequestHandler):
             if not url:
                 self.send_error(400, 'Missing url')
                 return
+            if not is_safe_image_url(url):
+                self.send_error(403, 'Blocked: domain not allowed')
+                return
             try:
                 req = urllib.request.Request(url, headers={
-                    'Referer': 'https://www.kuaishou.com/',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                    'Referer': config.image_proxy_referer(),
+                    'User-Agent': config.image_proxy_user_agent(),
                     'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                     'Accept-Language': 'zh-CN,zh;q=0.9',
                     'Sec-Fetch-Dest': 'image',
@@ -439,7 +547,7 @@ class Handler(BaseHTTPRequestHandler):
                     ct = resp.headers.get('Content-Type', 'image/jpeg')
                 self.send_response(200)
                 self.send_header('Content-Type', ct)
-                self.send_header('Cache-Control', 'public, max-age=86400')
+                self.send_header('Cache-Control', f'public, max-age={config.image_proxy_cache_max_age()}')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(data)
@@ -452,6 +560,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(placeholder)
+
+        elif parsed.path == '/api/config':
+            json_response(self, config.get())
 
         else:
             filepath = FRONTEND_DIR / parsed.path.lstrip('/')
@@ -470,6 +581,61 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == '/api/groups':
+            body = json.loads(read_body(self))
+            action = body.get('action', '')
+            conn = get_db()
+            try:
+                if action == 'create':
+                    name = body.get('name', '').strip()
+                    if not name:
+                        json_response(self, {'error': '缺少分组名'}, 400)
+                        return
+                    conn.execute('INSERT OR IGNORE INTO groups (group_name) VALUES (?)', (name,))
+                    conn.commit()
+                    gid = conn.execute('SELECT id FROM groups WHERE group_name=?', (name,)).fetchone()[0]
+                    # 如果传了 account_ids，直接加入
+                    for aid in (body.get('account_ids') or []):
+                        conn.execute('UPDATE accounts SET group_id=? WHERE id=?', (gid, aid))
+                    conn.commit()
+                    json_response(self, {'status': 'ok', 'id': gid})
+
+                elif action == 'delete':
+                    gid = body.get('id')
+                    conn.execute('UPDATE accounts SET group_id=NULL WHERE group_id=?', (gid,))
+                    conn.execute('DELETE FROM groups WHERE id=?', (gid,))
+                    conn.commit()
+                    json_response(self, {'status': 'ok'})
+
+                elif action == 'add_member':
+                    gid = body.get('group_id')
+                    aid = body.get('account_id')
+                    conn.execute('UPDATE accounts SET group_id=? WHERE id=?', (gid, aid))
+                    conn.commit()
+                    json_response(self, {'status': 'ok'})
+
+                elif action == 'remove_member':
+                    aid = body.get('account_id')
+                    conn.execute('UPDATE accounts SET group_id=NULL WHERE id=?', (aid,))
+                    conn.commit()
+                    json_response(self, {'status': 'ok'})
+
+                elif action == 'rename':
+                    gid = body.get('id')
+                    name = body.get('name', '').strip()
+                    conn.execute('UPDATE groups SET group_name=? WHERE id=?', (name, gid))
+                    conn.commit()
+                    json_response(self, {'status': 'ok'})
+
+                else:
+                    json_response(self, {'error': 'unknown action'}, 400)
+            except Exception as e:
+                conn.rollback()
+                json_response(self, {'error': str(e)}, 500)
+            finally:
+                conn.close()
+            return
 
         if parsed.path == '/api/login':
             body = json.loads(read_body(self))
@@ -495,7 +661,7 @@ class Handler(BaseHTTPRequestHandler):
 
             subprocess.Popen(
                 ['cmd.exe', '/c', 'python',
-                 r'C:\Users\NINGMEI\Desktop\social-monitor\win_login.py',
+                 config.windows_script('login'),
                  platform, account_name],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
@@ -530,18 +696,6 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
 
-        elif parsed.path == '/api/collect/log':
-            log_path = MONITOR_DIR / 'collect_status.json'
-            if log_path.exists():
-                try:
-                    with open(log_path) as f:
-                        st = json.load(f)
-                    json_response(self, st)
-                except:
-                    json_response(self, {'status': 'idle', 'lines': []})
-            else:
-                json_response(self, {'status': 'idle', 'lines': []})
-
         elif parsed.path.startswith('/api/relogin'):
             if parsed.path == '/api/relogin/status':
                 """查询扫码登录状态（GET）"""
@@ -552,13 +706,13 @@ class Handler(BaseHTTPRequestHandler):
                             st = json.load(f)
                         account_name = st.get('account_name', '')
                         platform = st.get('platform', '')
-                        done_file = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies") / f'.{platform}_{account_name}_done'
+                        cookies_wsl = Path(config.wsl_path("social-auto-upload/cookies"))
+                        done_file = cookies_wsl / f'.{platform}_{account_name}_done'
                         if done_file.exists():
-                            win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                            win_cookies = cookies_wsl
                             src_file = win_cookies / f'{platform}_{account_name}.json'
                             dst = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
                             if src_file.exists():
-                                import shutil
                                 shutil.copy2(str(src_file), str(dst))
                             done_file.unlink(missing_ok=True)
                             st['status'] = 'success'
@@ -577,9 +731,8 @@ class Handler(BaseHTTPRequestHandler):
                     platform = parts[3]
                     account_name = parts[4]
                     try:
-                        import shutil
                         src = MONITOR_DIR / 'social-auto-upload' / 'cookies' / f'{platform}_{account_name}.json'
-                        win_cookies = Path("/mnt/c/Users/NINGMEI/Desktop/social-monitor/social-auto-upload/cookies")
+                        win_cookies = Path(config.wsl_path("social-auto-upload/cookies"))
                         win_cookies.mkdir(parents=True, exist_ok=True)
                         if src.exists():
                             shutil.copy2(str(src), str(win_cookies / f'{platform}_{account_name}.json'))
@@ -589,9 +742,9 @@ class Handler(BaseHTTPRequestHandler):
                             json.dump({'status': 'running', 'platform': platform, 'account_name': account_name,
                                        'message': f'正在打开浏览器扫码登录 {platform}/{account_name}...'}, f)
 
-                        win_relogin = r'C:\Users\NINGMEI\Desktop\social-monitor\win_relogin.py'
                         subprocess.Popen(
-                            ['cmd.exe', '/c', 'start', '/wait', 'python', win_relogin, platform, account_name,
+                            ['cmd.exe', '/c', 'start', '/wait', 'python',
+                             config.windows_script('relogin'), platform, account_name,
                              '&&', 'echo', 'DONE', '>', str(win_cookies / f'.{platform}_{account_name}_done')],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                         )
@@ -600,6 +753,14 @@ class Handler(BaseHTTPRequestHandler):
                         json_response(self, {'status': 'error', 'message': str(e)}, 500)
                 else:
                     json_response(self, {'status': 'error', 'message': '参数不足: /api/relogin/{platform}/{account}'}, 400)
+
+        elif parsed.path == '/api/config':
+            body = json.loads(read_body(self))
+            try:
+                config.save(body)
+                json_response(self, {'status': 'ok', 'config': config.get()})
+            except Exception as e:
+                json_response(self, {'status': 'error', 'message': str(e)}, 500)
 
         else:
             json_response(self, {'error': 'not found'}, 404)
@@ -616,13 +777,14 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    print(f"📡 Social Monitor API — http://localhost:{PORT}")
-    print(f"   前端页面: http://localhost:{PORT}")
-    print(f"   API接口:  http://localhost:{PORT}/api/data")
-    print(f"   新增账号: POST http://localhost:{PORT}/api/login")
+    port = config.server_port()
+    print(f"📡 Social Monitor API — http://localhost:{port}")
+    print(f"   前端页面: http://localhost:{port}")
+    print(f"   API接口:  http://localhost:{port}/api/data")
+    print(f"   新增账号: POST http://localhost:{port}/api/login")
     print()
 
-    server = HTTPServer(('0.0.0.0', PORT), Handler)
+    server = ThreadingHTTPServer(('0.0.0.0', port), Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

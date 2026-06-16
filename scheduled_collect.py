@@ -9,13 +9,15 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import config
+
 MONITOR_DIR = Path(__file__).parent
 LOG_DIR = MONITOR_DIR / "logs"
 LOG_FILE = LOG_DIR / f"collect_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
-MAX_RETRIES = 3       # 最多重试 3 次
-RETRY_DELAY = 3600     # 每次重试间隔 1 小时
-PLATFORMS = ['douyin', 'kuaishou', 'xiaohongshu', 'shipinhao']
+MAX_RETRIES = config.schedule_max_retries()
+RETRY_DELAY = config.schedule_retry_delay()
+PLATFORMS = config.schedule_platforms()
 
 
 def log(msg):
