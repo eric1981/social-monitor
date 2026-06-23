@@ -9,6 +9,8 @@ echo "Social Monitor — data dir: $DATA_DIR"
 
 # Ensure data directory structure
 mkdir -p "$DATA_DIR/cookies" "$DATA_DIR/logs" "$DATA_DIR/social-auto-upload/cookies"
+# Ensure tmp dir exists in app directory (for QR images etc.)
+mkdir -p /app/tmp
 
 # Initialize DB from image if not already present
 if [ ! -f "$DATA_DIR/monitor.db" ]; then

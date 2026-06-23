@@ -1,6 +1,7 @@
 """Shared utilities for API handlers."""
 
 import json
+import os
 import ipaddress
 import socket
 import subprocess
@@ -46,8 +47,13 @@ def read_body(handler):
 def spawn_script(*args):
     """Spawn a Python script using the correct interpreter.
     Under WSL, uses the configured Windows Python so Playwright works.
+    In Docker/Linux, uses sys.executable directly.
     """
-    if config.is_wsl():
+    # Detect Docker: /proc/1/cgroup contains 'docker' or /.dockerenv exists
+    _in_docker = os.path.exists('/.dockerenv') or (
+        os.path.exists('/proc/1/cgroup') and 'docker' in open('/proc/1/cgroup').read()
+    )
+    if config.is_wsl() and not _in_docker:
         win_path = config.windows_python_path()
         exe = win_path.replace("C:\\", "/mnt/c/").replace("\\", "/")
     else:

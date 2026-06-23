@@ -1319,7 +1319,7 @@ if __name__ == '__main__':
     # Sync db module's DB_PATH with server's (might differ under SM_DATA_DIR override)
     db.DB_PATH = DATA_DIR / "monitor.db"
     db.MONITOR_DIR = MONITOR_DIR
-    migrate_db()
+    db_migrate()
     port = config.server_port()
     print(f"📡 Social Monitor API — http://localhost:{port}")
     print(f"   前端页面: http://localhost:{port}")
