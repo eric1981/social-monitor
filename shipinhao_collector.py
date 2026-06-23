@@ -3,6 +3,7 @@
 Windows 侧视频号采集脚本 — API 直调
 """
 import json, os, sys, asyncio
+from pathlib import Path
 
 try:
     from patchright.async_api import async_playwright
@@ -10,7 +11,8 @@ except ImportError:
     from playwright.async_api import async_playwright
 
 PROJECT_ROOT = Path(__file__).parent
-COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+DATA_DIR = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
+COOKIES_DIR = DATA_DIR / 'social-auto-upload' / 'cookies'
 TMP_DIR = PROJECT_ROOT / 'tmp'
 
 async def collect():

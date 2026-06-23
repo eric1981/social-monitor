@@ -5,6 +5,7 @@ Windows 侧小红书采集脚本 — Playwright + cookie 文件
 """
 
 import json, os, sys, asyncio
+from pathlib import Path
 
 try:
     from patchright.async_api import async_playwright
@@ -15,7 +16,8 @@ except ImportError:
         print("ERROR: Need playwright or patchright"); sys.exit(1)
 
 PROJECT_ROOT = Path(__file__).parent
-COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+DATA_DIR = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
+COOKIES_DIR = DATA_DIR / 'social-auto-upload' / 'cookies'
 TMP_DIR = PROJECT_ROOT / 'tmp'
 
 def find_cookie(account_name):

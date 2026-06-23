@@ -24,7 +24,8 @@ except ImportError:
         sys.exit(1)
 
 PROJECT_ROOT = Path(__file__).parent
-COOKIES_DIR = PROJECT_ROOT / "social-auto-upload" / "cookies"
+DATA_DIR_COOKIES = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
+COOKIES_DIR = DATA_DIR_COOKIES / "social-auto-upload" / "cookies"
 TMP_DIR = PROJECT_ROOT / "tmp"
 
 

@@ -19,7 +19,8 @@ except ImportError:
     from playwright.async_api import async_playwright
 
 PROJECT_ROOT = Path(__file__).parent
-COOKIES_DIR = PROJECT_ROOT / 'social-auto-upload' / 'cookies'
+DATA_DIR = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
+COOKIES_DIR = DATA_DIR / 'social-auto-upload' / 'cookies'
 TMP_DIR = PROJECT_ROOT / 'tmp'
 STEALTH_JS_PATH = str(PROJECT_ROOT / 'social-auto-upload' / 'utils' / 'stealth.min.js')
 
@@ -200,8 +201,21 @@ async def run(token, platform, account_name):
                         success = True
                         break
                 elif platform == 'douyin':
-                    # Douyin login: after QR scan, redirects to creator console
-                    # Wait for redirect away from /login
+                    # After QR scan on phone, douyin redirects to creator console
+                    # Try navigating to creator console to confirm login state
+                    if i == 5:  # 5s after QR should be scanned
+                        try:
+                            await page.goto(
+                                'https://creator.douyin.com/creator-micro/content/upload',
+                                wait_until='domcontentloaded', timeout=10000
+                            )
+                            await page.wait_for_timeout(2000)
+                            if 'login' not in page.url.lower():
+                                success = True
+                                break
+                        except Exception:
+                            pass
+                    # Also check if page itself redirected
                     if 'login' not in current_url.lower() and '/creator-micro/' in current_url.lower():
                         success = True
                         break

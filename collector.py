@@ -33,17 +33,20 @@ TMP_DIR = MONITOR_DIR / "tmp"
 
 # 脚本名称映射（项目根目录下的脚本）
 COLLECTOR_SCRIPTS = {
-    "douyin": "win_collector.py",
-    "kuaishou": "win_kuaishou.py",
-    "xiaohongshu": "win_xiaohongshu.py",
-    "shipinhao": "win_shipinhao.py",
-    "stats": "win_collect_stats.py",
+    "douyin": "douyin_collector.py",
+    "kuaishou": "kuaishou_collector.py",
+    "xiaohongshu": "xiaohongshu_collector.py",
+    "shipinhao": "shipinhao_collector.py",
+    "stats": "collect_stats.py",
 }
 
 
 def _get_python_exe():
     """Return the correct Python executable for running Playwright scripts."""
-    if config.is_wsl():
+    _in_docker = os.path.exists('/.dockerenv') or (
+        os.path.exists('/proc/1/cgroup') and 'docker' in open('/proc/1/cgroup').read()
+    )
+    if config.is_wsl() and not _in_docker:
         win_path = config.windows_python_path()
         return win_path.replace('C:\\', '/mnt/c/').replace('\\', '/')
     return sys.executable
