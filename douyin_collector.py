@@ -1,39 +1,41 @@
 #!/usr/bin/env python3
 """
-Windows 侧抖音采集脚本
-用 Playwright + cookie 直接调用创作者后台 API，支持全量翻页（游标模式）。
-输出到 Windows 桌面 social-monitor/tmp/<account_name>.json
+Douyin video collector — uses social-auto-upload's stealth.js for anti-fingerprinting,
+same cookie persistence pattern as douyin_cookie_gen.
 
-用法: python win_collector.py <account_name>
+Usage: python douyin_collector.py <account_name>
 """
 
+import asyncio
 import json
 import os
 import sys
-import asyncio
 from pathlib import Path
 
-# ── 导入 playwright/patchright ──────────────────────
 try:
     from patchright.async_api import async_playwright
 except ImportError:
-    try:
-        from playwright.async_api import async_playwright
-    except ImportError:
-        print("ERROR: Need playwright or patchright")
-        sys.exit(1)
+    from playwright.async_api import async_playwright
 
 PROJECT_ROOT = Path(__file__).parent
-DATA_DIR_COOKIES = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
-COOKIES_DIR = DATA_DIR_COOKIES / "social-auto-upload" / "cookies"
-TMP_DIR = PROJECT_ROOT / "tmp"
+DATA_DIR = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
+COOKIES_DIR = DATA_DIR / 'social-auto-upload' / 'cookies'
+TMP_DIR = PROJECT_ROOT / 'tmp'
+
+# social-auto-upload stealth.js path (no import needed)
+_STEALTH_JS_PATH = str(PROJECT_ROOT / 'social-auto-upload' / 'utils' / 'stealth.min.js')
+
+
+async def set_init_script(context):
+    if os.path.exists(_STEALTH_JS_PATH):
+        await context.add_init_script(path=_STEALTH_JS_PATH)
+    return context
 
 
 def find_cookie(account_name):
-    """在项目 cookies 目录查找 cookie 文件（跨平台）。"""
     candidates = [
-        COOKIES_DIR / f"douyin_{account_name}.json",
-        COOKIES_DIR / f"douyin_uploader" / account_name,
+        COOKIES_DIR / f'douyin_{account_name}.json',
+        COOKIES_DIR / 'douyin_uploader' / account_name,
     ]
     for p in candidates:
         if p.exists():
@@ -50,16 +52,38 @@ async def collect():
         sys.exit(1)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--headless=new',
+                '--disable-features=HeadlessChrome',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+            ],
+        )
         try:
-            context = await browser.new_context(storage_state=account_file)
+            context = await browser.new_context(
+                storage_state=account_file,
+                locale='zh-CN',
+                timezone_id='Asia/Shanghai',
+                viewport={'width': 1400, 'height': 900},
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            )
+            context = await set_init_script(context)
             page = await context.new_page()
 
             await page.goto(
-                "https://creator.douyin.com/creator-micro/content/upload",
-                wait_until="domcontentloaded"
+                'https://creator.douyin.com/creator-micro/content/upload',
+                wait_until='domcontentloaded'
             )
-            await page.wait_for_timeout(3000)
+            await page.wait_for_timeout(5000)
+
+            # Check login state
+            if await page.get_by_text('扫码登录').first.count() or \
+               await page.get_by_text('手机号登录').first.count():
+                print("  NOT LOGGED IN: cookie invalid, please re-scan", flush=True)
+                sys.exit(1)
 
             PAGE_SIZE = 20
             all_videos = []
@@ -73,28 +97,22 @@ async def collect():
                 if max_cursor:
                     url += f"&max_cursor={max_cursor}"
 
-                api_json = await page.evaluate(f"""
-                    async () => {{
-                        const r = await fetch('{url}', {{ credentials: "include" }});
-                        return JSON.stringify(await r.json());
-                    }}
-                """)
+                api_json = await page.evaluate(f"""async () => {{
+                    const r = await fetch('{url}', {{ credentials: "include" }});
+                    return JSON.stringify(await r.json());
+                }}""")
                 data = json.loads(api_json)
-                
+
                 work_list = (data.get('data') or {}).get('work_list',
                            data.get('aweme_list', []) or data.get('items', []))
 
                 if not work_list:
                     break
 
-                # 去重检查
                 existing_ids = {v['aweme_id'] for v in all_videos}
                 new_items = [v for v in work_list if v.get('aweme_id') not in existing_ids]
 
                 if not new_items:
-                    # 连续两次无新数据就退出
-                    if not has_more:
-                        break
                     has_more = False
                 else:
                     all_videos.extend(new_items)
@@ -102,14 +120,12 @@ async def collect():
                     max_cursor = data.get('max_cursor', max_cursor)
                     page_num += 1
 
-                print(f"  Page {page_num-1}: {len(work_list)} items, {len(new_items)} new, more={has_more}", flush=True)
+                print(f"  Page {page_num-1}: {len(work_list)} items, {len(new_items)} new", flush=True)
                 await page.wait_for_timeout(300)
 
-            # 写入输出文件
             out_path = TMP_DIR / f'{account_name}.json'
             TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-            # 提取账号昵称（从第一个视频的 author 或返回数据中）
             nickname = ''
             for v in all_videos:
                 author = v.get('author', {})
@@ -117,12 +133,10 @@ async def collect():
                     nickname = author['nickname']
                     break
 
-            # 只保留需要的字段，精简存储
             cleaned = []
             for v in all_videos:
                 stats = v.get('statistics', {})
                 create_time = v.get('create_time') or v.get('public_time', 0)
-                # 封面图：从 video.cover.url_list 取第一张
                 video_info = v.get('video', {}) or {}
                 cover_list = video_info.get('cover', {}).get('url_list', []) or []
                 cover_url = cover_list[0] if cover_list else ''
@@ -140,7 +154,10 @@ async def collect():
                     'cover_url': cover_url,
                 })
 
-            out_data = {'videos': cleaned, 'nickname': nickname}
+            out_data = {'videos': cleaned}
+            if nickname:
+                out_data['nickname'] = nickname
+
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(out_data, f, ensure_ascii=False)
 

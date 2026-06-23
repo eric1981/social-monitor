@@ -1097,7 +1097,7 @@ class Handler(BaseHTTPRequestHandler):
 
             # Generate token and spawn headless QR login (embedded, no popup Chrome window)
             token = str(uuid.uuid4())[:8]
-            spawn_script(str(MONITOR_DIR / 'qr_login.py'), token, platform, account_name)
+            spawn_script(str(MONITOR_DIR / 'login_bridge.py'), token, platform, account_name)
 
             json_response(self, {
                 'status': 'ok',

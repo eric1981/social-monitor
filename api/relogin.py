@@ -2,6 +2,7 @@
 
 import json
 import uuid
+from pathlib import Path
 from urllib.parse import urlparse
 
 from db import get_db, MONITOR_DIR
@@ -97,7 +98,21 @@ def _handle_get(handler, path):
             handler.send_response(400)
             handler.end_headers()
             return True
-        img_path = MONITOR_DIR / "tmp" / f"qr_{token}.png"
+        # First try the fixed path, then check JSON for douyin_cookie_gen's path
+        status_file = MONITOR_DIR / "tmp" / f"qr_{token}.json"
+        if status_file.exists():
+            try:
+                with open(status_file) as f:
+                    st = json.load(f)
+                img_file = st.get('qr_image_path', '')
+                if img_file and Path(img_file).exists():
+                    img_path = Path(img_file)
+                else:
+                    img_path = MONITOR_DIR / "tmp" / f"qr_{token}.png"
+            except Exception:
+                img_path = MONITOR_DIR / "tmp" / f"qr_{token}.png"
+        else:
+            img_path = MONITOR_DIR / "tmp" / f"qr_{token}.png"
         if not img_path.exists():
             handler.send_response(404)
             handler.end_headers()

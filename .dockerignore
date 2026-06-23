@@ -18,7 +18,6 @@ cookies/
 logs/
 tmp/
 data/
-social-auto-upload/
 
 # ── Runtime files ──
 *.log
