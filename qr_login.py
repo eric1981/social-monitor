@@ -26,7 +26,7 @@ STEALTH_JS_PATH = str(PROJECT_ROOT / 'social-auto-upload' / 'utils' / 'stealth.m
 PLATFORM_CONFIG = {
     'douyin': {
         'cookie_dir': 'douyin_uploader',
-        'login_url': 'https://creator.douyin.com/creator-micro/content/upload',
+        'login_url': 'https://creator.douyin.com/login',
         'qr_selector': 'img[src*="qrcode"], .qrcode-img, .login-qrcode img, canvas[class*="qr"]',
     },
     'kuaishou': {
@@ -51,8 +51,10 @@ def write_status(token, **kwargs):
     """Write status to tmp/qr_{token}.json"""
     TMP_DIR.mkdir(exist_ok=True)
     path = TMP_DIR / f'qr_{token}.json'
+    # Append debug info
+    kwargs.setdefault('_debug', {})
     with open(path, 'w') as f:
-        json.dump(kwargs, f)
+        json.dump(kwargs, f, ensure_ascii=False)
 
 
 async def run(token, platform, account_name):
@@ -71,6 +73,13 @@ async def run(token, platform, account_name):
         cookie_dir = os.path.join(cookie_base, f'{platform}_uploader')
     os.makedirs(cookie_dir, exist_ok=True)
     cookie_file = os.path.join(cookie_dir, account_name)
+
+    # Remove existing cookie file so we force a fresh QR login
+    if os.path.exists(cookie_file):
+        os.remove(cookie_file)
+        cookie_dir_flat = os.path.join(cookie_base, f'{platform}_{account_name}.json')
+        if os.path.exists(cookie_dir_flat):
+            os.remove(cookie_dir_flat)
 
     write_status(token, status='starting', platform=platform, account_name=account_name,
                  started_at=datetime.now().isoformat())
@@ -105,6 +114,7 @@ async def run(token, platform, account_name):
                 viewport={'width': 1400, 'height': 900},
                 locale='zh-CN',
                 timezone_id='Asia/Shanghai',
+                storage_state={},
             )
 
             # Inject stealth
@@ -133,6 +143,15 @@ async def run(token, platform, account_name):
             await page.goto(config['login_url'], wait_until="domcontentloaded")
             await page.wait_for_timeout(3000)
 
+            # Clear any persistent login state in browser storage
+            await page.evaluate('localStorage.clear(); sessionStorage.clear()')
+
+            # Cookie already cleared above — if page redirected away from login,
+            # it's a server-side redirect. Force back to login page.
+            if 'login' not in page.url.lower():
+                await page.goto(config['login_url'], wait_until="domcontentloaded")
+                await page.wait_for_timeout(3000)
+
             # Try to find and screenshot QR code element
             qr_image_path = TMP_DIR / f'qr_{token}.png'
             qr_found = False
@@ -142,7 +161,19 @@ async def run(token, platform, account_name):
                 try:
                     qr_el = await page.wait_for_selector(selector, timeout=5000)
                     if qr_el:
-                        await qr_el.screenshot(path=str(qr_image_path))
+                        tag = await qr_el.get_attribute('tagName') or ''
+                        tag = tag.lower()
+                        if tag == 'canvas':
+                            # Canvas screenshot via JS dataURL
+                            qr_data = await page.evaluate('''(el) => {
+                                return el.toDataURL('image/png')
+                            }''', qr_el)
+                            import base64
+                            img_data = base64.b64decode(qr_data.split(',')[1])
+                            with open(str(qr_image_path), 'wb') as f:
+                                f.write(img_data)
+                        else:
+                            await qr_el.screenshot(path=str(qr_image_path))
                         qr_found = True
                         break
                 except Exception:
@@ -154,6 +185,7 @@ async def run(token, platform, account_name):
 
             write_status(token, status='waiting_scan', platform=platform,
                          account_name=account_name, qr_found=qr_found,
+                         _debug={'url': page.url, 'image_size': qr_image_path.stat().st_size if qr_image_path.exists() else 0},
                          updated_at=datetime.now().isoformat())
 
             # Poll for login completion — max 2 minutes
@@ -167,6 +199,24 @@ async def run(token, platform, account_name):
                     if 'login' not in current_url.lower() and ('post' in current_url.lower() or 'platform' in current_url.lower()):
                         success = True
                         break
+                elif platform == 'douyin':
+                    # Douyin login: after QR scan, redirects to creator console
+                    # Wait for redirect away from /login
+                    if 'login' not in current_url.lower() and '/creator-micro/' in current_url.lower():
+                        success = True
+                        break
+                elif platform == 'xiaohongshu':
+                    # Xiaohongshu also uses same-URL QR login popup
+                    try:
+                        await page.wait_for_selector(
+                            'div.creator-container, nav[class*="nav"], '
+                            'span:has-text("笔记"), a:has-text("数据中心")',
+                            timeout=1000
+                        )
+                        success = True
+                        break
+                    except Exception:
+                        pass
                 else:
                     if 'login' not in current_url.lower():
                         success = True
@@ -209,6 +259,7 @@ async def run(token, platform, account_name):
 
             write_status(token, status='success', platform=platform,
                          account_name=account_name,
+                         _debug={'url': page.url, 'success_reason': 'element_detected' if platform in ('douyin','xiaohongshu') else 'url_changed'},
                          updated_at=datetime.now().isoformat())
 
         except Exception as e:
