@@ -2,10 +2,15 @@
   "server": {
     "port": 5408
   },
+  "windows": {
+    "python_path": "C:\\Users\\NINGMEI\\AppData\\Local\\Python\\bin\\python.exe"
+  },
   "collect": {
     "cookie_max_age_days": 30,
     "timeout_seconds": 120,
-    "retry_delay_seconds": 3
+    "retry_delay_seconds": 3,
+    "retry_max": 3,
+    "retry_backoff_base": 3
   },
   "schedule": {
     "max_retries": 3,

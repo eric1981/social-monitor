@@ -4,6 +4,7 @@
 用法: python win_relogin.py <platform> <account_name>
 """
 import sys, asyncio, os, json, shutil
+from pathlib import Path
 
 platform = sys.argv[1] if len(sys.argv) > 1 else 'douyin'
 account_name = sys.argv[2] if len(sys.argv) > 2 else 'unknown'
@@ -31,6 +32,11 @@ else:
 # cookie 文件在 social-auto-upload 自己的目录
 account_file = os.path.join(sau_dir, 'cookies', f'{platform}_{account_name}.json')
 
+# 重新扫码 = 必须重新登录，先删掉旧 cookie 防 login_fn 直接返回 True
+if os.path.exists(account_file):
+    os.remove(account_file)
+    print(f"已删除旧 cookie: {account_file}")
+
 print(f"正在打开浏览器扫码登录 {platform}/{account_name}...")
 print(f"cookie: {account_file}")
 r = asyncio.run(login_fn(account_file, handle=True, headless=False))
@@ -38,12 +44,19 @@ print(f"登录结果: {r}")
 
 # douyin_setup 返回 bool，True=成功
 if r:
-    # 同步到 social-monitor 的 cookie 目录（WSL 侧也可访问）
+    # 同步到 social-monitor 的 cookie 目录
     monitor_cookie_dir = str(COOKIES_DIR)
     os.makedirs(monitor_cookie_dir, exist_ok=True)
     dst = os.path.join(monitor_cookie_dir, f'{platform}_{account_name}.json')
-    shutil.copy2(account_file, dst)
-    print(f"✓ cookie 已同步到: {dst}")
+    if os.path.abspath(account_file) != os.path.abspath(dst):
+        shutil.copy2(account_file, dst)
+        print(f"✓ cookie 已同步到: {dst}")
+    else:
+        print(f"✓ cookie 已保存: {dst}")
+    # 写入完成标记，让 server.py 的轮询检测到
+    done_file = os.path.join(monitor_cookie_dir, f'.{platform}_{account_name}_done')
+    with open(done_file, 'w') as f:
+        f.write('ok')
     sys.exit(0)
 else:
     print(f"✗ 登录失败")

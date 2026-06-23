@@ -1,0 +1,43 @@
+# ── Git ──
+.git/
+.gitignore
+.github/
+
+# ── Python cache ──
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# ── Data (mounted as volume) ──
+*.db
+*.db-shm
+*.db-wal
+cookies/
+logs/
+tmp/
+data/
+social-auto-upload/
+
+# ── Runtime files ──
+*.log
+collect_status.json
+collect_summary.json
+relogin_status.json
+alert_dismissals.json
+
+# ── Dev files ──
+.vscode/
+.idea/
+*.code-workspace
+
+# ── Docs ──
+docs/
+*.md
+!README.md
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+*:Zone.Identifier

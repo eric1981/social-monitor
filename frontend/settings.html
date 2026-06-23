@@ -37,11 +37,11 @@
   --space-xl: 32px;
   --space-xxl: 48px;
   --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
-  --shadow-card: rgba(0,0,0,0.06) 0 1px 3px, rgba(0,0,0,0.08) 0 2px 8px;
+  --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: var(--font); background: var(--surface-soft); color: var(--ink); font-size: 14px; line-height: 1.5; }
+body { font-family: var(--font); background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.43; }
 
 .app { max-width: 960px; margin: 0 auto; padding: var(--space-lg); }
 
@@ -115,6 +115,24 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: var(--space-sm); }
   font-size: 11px; padding: 2px 8px; background: var(--surface-strong); border-radius: var(--rounded-full);
   color: var(--body); font-family: 'SF Mono', 'Consolas', monospace;
 }
+
+/* ── Loading ─────────────────────────────────────── */
+.loading { text-align: center; padding: var(--space-xxl); color: var(--muted); }
+.loading .spinner {
+  width: 32px; height: 32px; border: 3px solid var(--hairline);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.7s linear infinite; margin: 0 auto var(--space-base);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error Banner */
+.error-banner {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-md) var(--space-base);
+  background: #fff0f0; border: 1px solid #ffc9c9;
+  border-radius: var(--rounded-md); margin-bottom: var(--space-lg);
+  font-size: 13px; color: var(--primary);
+}
 </style>
 </head>
 <body>
@@ -128,8 +146,20 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: var(--space-sm); }
     </div>
   </nav>
 
-  <h1>⚙ 系统配置</h1>
-  <p class="page-desc">修改后点击保存。配置保存到 config.json，服务自动生效（下次启动时读取，部分配置需重启服务）。</p>
+  <div v-if="loading" class="loading">
+    <div class="spinner"></div>
+    <div>加载配置中...</div>
+  </div>
+
+  <!-- Error Banner -->
+  <div v-if="!loading && error" class="error-banner">
+    <span>⚠️ {{ error }}</span>
+    <button class="btn btn-secondary" style="height:30px;padding:0 14px;font-size:12px;" @click="loadConfig">重试</button>
+  </div>
+
+  <template v-else-if="!error">
+    <h1>⚙ 系统配置</h1>
+    <p class="page-desc">修改后点击保存。配置保存到 config.json，服务自动生效（下次启动时读取，部分配置需重启服务）。</p>
 
   <!-- Server -->
   <div class="config-section">
@@ -222,6 +252,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: var(--space-sm); }
     <button @click="saveConfig" :disabled="saving">{{ saving ? '保存中...' : '保存配置' }}</button>
     <span class="status" :class="statusClass">{{ statusMsg }}</span>
   </div>
+  </template>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -237,6 +268,8 @@ createApp({
       snapshot_retention_days: 90,
       image_proxy: { referer: '', user_agent: '', cache_max_age_seconds: 86400, allowed_domains: [] },
     });
+    const loading = ref(true);
+    const error = ref('');
     const platformsStr = ref('');
     const domainsStr = ref('');
     const saving = ref(false);
@@ -259,6 +292,7 @@ createApp({
     async function loadConfig() {
       try {
         const resp = await fetch('/api/config');
+        if (!resp.ok) throw new Error(resp.statusText);
         const data = await resp.json();
         // 深度合并——保留未返回字段的默认值
         if (data.server) cfg.value.server = { ...cfg.value.server, ...data.server };
@@ -273,7 +307,10 @@ createApp({
 
         platformsStr.value = cfg.value.schedule.platforms.join(', ');
         domainsStr.value = cfg.value.image_proxy.allowed_domains.join('\n');
+        loading.value = false;
       } catch (e) {
+        loading.value = false;
+        error.value = '加载配置失败: ' + e.message;
         statusMsg.value = '加载配置失败: ' + e.message;
         statusClass.value = 'err';
       }
@@ -309,7 +346,7 @@ createApp({
     onMounted(loadConfig);
 
     return {
-      cfg, platformsStr, domainsStr, saving, statusMsg, statusClass,
+      cfg, platformsStr, domainsStr, saving, statusMsg, statusClass, loading, error,
       formatSeconds, syncPlatforms, syncDomains, saveConfig,
     };
   }

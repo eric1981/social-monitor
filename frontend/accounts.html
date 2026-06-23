@@ -35,14 +35,13 @@
   --space-xxl: 48px;
   --font: 'Inter', 'Airbnb Cereal VF', -apple-system, system-ui, sans-serif;
   --shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px, rgba(0,0,0,0.1) 0 4px 8px;
-  --card-radius: 16px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: var(--font); background: var(--canvas); color: var(--ink);
   font-size: 14px; line-height: 1.43;
 }
-.app { max-width: 1200px; margin: 0 auto; padding: var(--space-lg); }
+.app { max-width: 1280px; margin: 0 auto; padding: var(--space-lg); }
 
 /* Top Nav */
 .top-nav {
@@ -85,6 +84,10 @@ body {
 .compare-cell .cc-platform { font-size: 16px; }
 .compare-cell .cc-followers { font-weight: 600; }
 .compare-cell .cc-plays { color: var(--muted-soft); font-size: 11px; }
+.compare-cell .cc-growth { font-size: 10px; font-weight: 500; }
+.compare-cell .cc-growth.up { color: #22c55e; }
+.compare-cell .cc-growth.down { color: #ef4444; }
+.compare-cell .cc-growth.flat { color: var(--muted-soft); }
 
 /* Page Header */
 .page-header {
@@ -109,7 +112,7 @@ body {
 .account-card {
   background: var(--canvas);
   border: 1px solid var(--hairline-soft);
-  border-radius: var(--card-radius);
+  border-radius: var(--rounded-md);
   text-decoration: none; color: inherit;
   overflow: hidden;
   transition: box-shadow 0.2s, border-color 0.2s;
@@ -161,6 +164,24 @@ body {
 .cookie-dot.ok { background: #22c55e; }
 .cookie-dot.failed { background: #ef4444; }
 .cookie-dot.unknown { background: #f59e0b; }
+
+/* Health dot (traffic light) */
+.health-dot {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid rgba(0,0,0,0.06);
+}
+.health-dot.green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+.health-dot.yellow { background: #eab308; box-shadow: 0 0 6px rgba(234,179,8,0.4); }
+.health-dot.red { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+.health-dot.gray { background: #d1d5db; }
+.health-score {
+  font-size: 11px; font-weight: 600; margin-left: 2px;
+}
+.health-score.green { color: #16a34a; }
+.health-score.yellow { color: #ca8a04; }
+.health-score.red { color: #dc2626; }
+.health-score.gray { color: #9ca3af; }
 
 /* Platform icon pill */
 .platform-pill {
@@ -226,11 +247,49 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Error Banner */
+.error-banner {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-md) var(--space-base);
+  background: #fff0f0; border: 1px solid #ffc9c9;
+  border-radius: var(--rounded-md); margin-bottom: var(--space-lg);
+  font-size: 13px; color: var(--primary);
+}
+
 /* Responsive */
 @media (max-width: 744px) {
   .app { padding: var(--space-base); }
   .card-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Tooltip System ─────────────────────────────── */
+.has-tooltip {
+  position: relative; cursor: help;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--surface-strong); color: var(--muted);
+  font-size: 11px; font-weight: 700; vertical-align: middle;
+  margin-left: 4px; transition: all 0.15s;
+  border: none; font-family: var(--font);
+}
+.has-tooltip:hover { background: var(--ink); color: var(--canvas); }
+.has-tooltip .tooltip-text {
+  visibility: hidden; opacity: 0;
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink); color: var(--canvas);
+  padding: 8px 14px; border-radius: var(--rounded-sm);
+  font-size: 12px; font-weight: 400;
+  white-space: nowrap; z-index: 200;
+  pointer-events: none; transition: opacity 0.15s;
+}
+.has-tooltip .tooltip-text::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+.has-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
 
 /* Relogin button on card */
 .cookie-relogin-btn {
@@ -319,6 +378,20 @@ body {
 .gm-group-item:hover { background: var(--surface-soft); }
 .gm-group-item.active { background: var(--surface-strong); font-weight: 600; }
 .gm-group-item .gm-count { font-size: 11px; color: var(--muted-soft); }
+.gm-group-item .gm-actions { display: none; gap: 2px; }
+.gm-group-item:hover .gm-actions { display: flex; }
+.gm-group-item .gm-actions button {
+  background: none; border: none; cursor: pointer; font-size: 12px;
+  padding: 2px 4px; border-radius: 4px; color: var(--muted-soft);
+}
+.gm-group-item .gm-actions button:hover { background: var(--hairline-soft); color: var(--ink); }
+.gm-group-item .gm-actions button.danger:hover { color: var(--primary); }
+.gm-group-item .gm-edit-input {
+  width: 100%; height: 28px; padding: 0 6px; border: 1px solid var(--hairline);
+  border-radius: var(--rounded-sm); font-size: 13px; font-family: var(--font);
+  outline: none;
+}
+.gm-group-item .gm-edit-input:focus { border-color: var(--ink); }
 .gm-member-item {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 10px; border-radius: var(--rounded-sm); margin-bottom: 2px;
@@ -332,6 +405,25 @@ body {
 .gm-create-row { display: flex; gap: var(--space-sm); padding: var(--space-sm) var(--space-base); border-bottom: 1px solid var(--hairline-soft); }
 .gm-create-row input { flex: 1; height: 34px; padding: 0 10px; border: 1px solid var(--hairline); border-radius: var(--rounded-sm); font-size: 13px; font-family: var(--font); outline: none; }
 .gm-create-row input:focus { border-color: var(--ink); }
+
+/* QR Code Login */
+.qr-area {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--space-lg); gap: var(--space-base);
+}
+.qr-image {
+  width: 200px; height: 200px; border: 1px solid var(--hairline-soft);
+  border-radius: var(--rounded-sm); object-fit: contain;
+}
+.qr-hint {
+  font-size: 14px; font-weight: 500; color: var(--ink); text-align: center;
+}
+.qr-subtitle {
+  font-size: 12px; color: var(--muted-soft); text-align: center;
+}
+.qr-done-icon { font-size: 48px; }
+.qr-done { background: #f0fff4; border-radius: var(--rounded-md); }
+.qr-fail { background: #fff8f0; border-radius: var(--rounded-md); }
 </style>
 </head>
 <body>
@@ -350,13 +442,20 @@ body {
     <div>加载中...</div>
   </div>
 
-  <template v-else>
+  <!-- Error Banner (shown even when not loading) -->
+  <div v-if="!loading && error" class="error-banner">
+    <span>⚠️ {{ error }}</span>
+    <button class="btn btn-secondary" style="height:30px;padding:0 14px;font-size:12px;" @click="fetchAccounts">重试</button>
+  </div>
+
+  <template v-if="!loading">
     <!-- Page Header -->
     <div class="page-header">
       <h2>👤 账号管理</h2>
       <div style="display:flex;gap:var(--space-sm);align-items:center;">
         <span class="count-badge">{{ accounts.length }} 个账号</span>
-        <button class="btn btn-primary" @click="openLoginModal">+ 新增账号</button>
+        <button class="btn btn-primary" @click="openLoginModal">+ 新增账号<span class="has-tooltip">?<span class="tooltip-text">添加新的社交媒体账号进行监控</span></span></button>
+        <button class="btn btn-secondary" @click="openKeywordModal">🔑 关键词<span class="has-tooltip">?<span class="tooltip-text">设置关键词自动匹配相关评论</span></span></button>
         <button class="btn btn-secondary" @click="openGroupModal">📋 分组管理</button>
       </div>
     </div>
@@ -370,8 +469,10 @@ body {
           <div class="compare-cells">
             <span v-for="(p, plat) in g.platforms" :key="plat" class="compare-cell" :class="p.cookie_status">
               <span class="cc-platform">{{ plat === 'douyin' ? '抖音' : plat === 'kuaishou' ? '快手' : plat === 'xiaohongshu' ? '小红书' : '视频号' }}</span>
+              <span class="cc-players">{{ p.nickname }}</span>
               <span class="cc-followers">{{ fmtNum(p.followers) }}</span>
               <span class="cc-plays">{{ fmtNum(p.plays) }}</span>
+              <span class="cc-growth" :class="p.growth_plays > 0 ? 'up' : p.growth_plays < 0 ? 'down' : 'flat'" :title="'7日播放增长'">{{ p.growth_plays > 0 ? '↑' : p.growth_plays < 0 ? '↓' : '→' }}{{ fmtNum(Math.abs(p.growth_plays)) }}</span>
             </span>
           </div>
         </div>
@@ -401,13 +502,15 @@ body {
                  @error="e => { e.target.style.display='none'; e.target.parentElement.querySelector('.avatar-fallback').style.display='inline'; }">
             <span class="avatar-fallback" v-show="!a.profile_avatar_url">👤</span>
           </div>
-          <div class="card-name-area">
-            <div class="card-name">
-              <span class="cookie-dot" :class="a.cookie_status"
-                    :title="'Cookie: ' + (cookieLabel(a.cookie_status))"></span>
-              {{ a.nickname || a.account_name }}
-            </div>
-            <div class="card-subname">{{ a.account_name }}</div>
+            <div class="card-name-area">
+                <div class="card-name">
+                  <span class="health-dot" :class="a.health_level || 'gray'"
+                        :title="a.health_detail || ''"></span>
+                  <span class="cookie-dot" :class="a.cookie_status"
+                        :title="'Cookie: ' + (cookieLabel(a.cookie_status))"></span>
+                  {{ a.nickname || a.account_name }}
+                </div>
+                <div class="card-subname">{{ a.account_name }}</div>
           </div>
           <span class="platform-pill" v-html="platformIcon(a.platform)"></span>
         </div>
@@ -448,54 +551,112 @@ body {
       </a>
     </div>
 
-    <div v-if="accounts.length === 0" style="text-align:center;padding:80px 0;color:var(--muted-soft);">
-      <div style="font-size:40px;margin-bottom:var(--space-base)">📭</div>
-      <div>暂无账号数据</div>
+    <div v-if="accounts.length === 0" style="text-align:center;padding:60px 0;max-width:480px;margin:0 auto;">
+      <div style="font-size:48px;margin-bottom:var(--space-base);">👋</div>
+      <div style="font-size:18px;font-weight:600;color:var(--ink);margin-bottom:var(--space-sm);">还没有账号</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:var(--space-lg);line-height:1.5;">
+        添加账号后即可自动采集该账号的视频数据<br>支持抖音、快手、小红书、视频号
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-sm);max-width:280px;margin:0 auto var(--space-lg);">
+        <div style="display:flex;align-items:center;gap:var(--space-sm);padding:8px 12px;background:var(--surface-soft);border-radius:var(--rounded-sm);font-size:13px;text-align:left;">
+          <span style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</span>
+          <span>点击上方「+ 新增账号」按钮</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-sm);padding:8px 12px;background:var(--surface-soft);border-radius:var(--rounded-sm);font-size:13px;text-align:left;">
+          <span style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</span>
+          <span>选择平台，输入账号名称</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-sm);padding:8px 12px;background:var(--surface-soft);border-radius:var(--rounded-sm);font-size:13px;text-align:left;">
+          <span style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</span>
+          <span>用手机扫描二维码完成登录</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" @click="openLoginModal" style="height:44px;padding:0 28px;font-size:15px;">➕ 新增第一个账号</button>
     </div>
   </template>
 
   <!-- Login Modal -->
   <div v-if="showLoginModal" class="modal-overlay" @click.self="closeLoginModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>新增账号 / 重新扫码</h2>
-      <button class="modal-close" @click="closeLoginModal">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">平台</label>
-        <select v-model="loginPlatform" class="form-select">
-          <option value="douyin">抖音</option>
-          <option value="kuaishou">快手</option>
-          <option value="xiaohongshu">小红书</option>
-          <option value="shipinhao">视频号</option>
-        </select>
+    <div class="modal" style="width:440px;">
+      <div class="modal-header">
+        <h2 v-if="accounts.length === 0">👋 添加第一个账号</h2>
+        <h2 v-else>新增账号 / 重新扫码</h2>
+        <button class="modal-close" @click="closeLoginModal">✕</button>
       </div>
-      <div class="form-group">
-        <label class="form-label">已有账号（选填）</label>
-        <select v-model="loginAccountKey" class="form-select" @change="onLoginAccountChange">
-          <option value="">— 手动输入新账号名 —</option>
-          <option v-for="a in accounts" :key="a.platform+':'+a.account_name" :value="a.platform+':'+a.account_name">{{ platformLabels[a.platform] }}：{{ a.nickname || a.account_name }}</option>
-        </select>
+      <div class="modal-body">
+        <!-- Step 1: Select platform + account (show when not yet generated QR) -->
+        <template v-if="qrStatus === 'idle'">
+          <!-- First-time guidance banner -->
+          <div v-if="accounts.length === 0" style="background:linear-gradient(135deg,#fff5f7,#fff);border:1px solid var(--hairline-soft);border-radius:var(--rounded-sm);padding:12px 14px;margin-bottom:var(--space-base);font-size:13px;color:var(--ink);line-height:1.5;">
+            <div style="font-weight:600;margin-bottom:4px;">👋 首次添加账号</div>
+            <div style="color:var(--muted);">选择要监控的平台，输入你的账号名称，然后扫码登录即可完成添加。</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">平台</label>
+            <select v-model="loginPlatform" class="form-select">
+              <option value="douyin">抖音</option>
+              <option value="kuaishou">快手</option>
+              <option value="xiaohongshu">小红书</option>
+              <option value="shipinhao">视频号</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">已有账号（选填）</label>
+            <select v-model="loginAccountKey" class="form-select" @change="onLoginAccountChange">
+              <option value="">— 手动输入新账号名 —</option>
+              <option v-for="a in accounts" :key="a.platform+':'+a.account_name" :value="a.platform+':'+a.account_name">{{ platformLabels[a.platform] }}：{{ a.nickname || a.account_name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">或输入新账号名</label>
+            <input v-model="loginAccountInput" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
+            <div class="form-hint">已有账号从下拉选择，新账号手动输入</div>
+          </div>
+        </template>
+
+        <!-- Step 2: QR code display -->
+        <template v-if="qrStatus === 'generating'">
+          <div class="qr-area">
+            <div class="spinner" style="width:40px;height:40px;margin:0 auto;"></div>
+            <div class="qr-hint">正在生成二维码...</div>
+          </div>
+        </template>
+
+        <template v-if="qrStatus === 'waiting_scan'">
+          <div class="qr-area">
+            <img :src="qrImageUrl" class="qr-image" alt="扫码登录二维码">
+            <div class="qr-hint">📱 请用手机扫描二维码登录</div>
+            <div class="qr-subtitle">{{ platformLabels[loginPlatform] }} — {{ loginAccountFinal }}</div>
+          </div>
+        </template>
+
+        <template v-if="qrStatus === 'success'">
+          <div class="qr-area qr-done">
+            <div class="qr-done-icon">✅</div>
+            <div class="qr-hint">登录成功！</div>
+          </div>
+        </template>
+
+        <template v-if="qrStatus === 'expired' || qrStatus === 'error'">
+          <div class="qr-area qr-fail">
+            <div class="qr-done-icon">⚠️</div>
+            <div class="qr-hint">{{ qrStatus === 'expired' ? '二维码已过期' : '生成失败' }}</div>
+            <button class="btn btn-primary" style="margin-top:12px;" @click="regenerateQR">重新生成</button>
+          </div>
+        </template>
+
+        <div v-if="loginStatus && qrStatus !== 'waiting_scan'" class="form-status" :class="{error: qrStatus === 'error' || qrStatus === 'expired'}">
+          {{ loginStatus }}
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">或输入新账号名</label>
-        <input v-model="loginAccountInput" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
-        <div class="form-hint">已有账号从下拉选择，新账号手动输入</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy && qrStatus === 'generating'">取消</button>
+        <button v-if="qrStatus === 'idle'" class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccountFinal">
+          生成二维码
+        </button>
       </div>
-      <div v-if="loginStatus" class="form-status" :class="{error: loginStatus.includes('失败') || loginStatus.includes('超时')}">
-        {{ loginStatus }}
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy">取消</button>
-      <button class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccountFinal">
-        <span v-if="loginBusy" class="spinner-sm"></span>
-        <span v-else>打开浏览器扫码</span>
-      </button>
     </div>
   </div>
-</div>
 
 <!-- Group Management Modal -->
 <div v-if="showGroupModal" class="modal-overlay" @click.self="closeGroupModal">
@@ -515,8 +676,21 @@ body {
           </div>
           <div class="gm-list">
             <div v-for="g in groupData.groups" :key="g.id" class="gm-group-item" :class="{active: selectedGroup && selectedGroup.id === g.id}" @click="selectGroup(g)">
-              <span>{{ g.name }}</span>
-              <span class="gm-count">{{ g.members.length }} 个账号</span>
+              <template v-if="editingGroupId === g.id">
+                <input class="gm-edit-input" v-model="editingGroupName"
+                       @keyup.enter="submitRename(g)" @keyup.escape="cancelRename"
+                       @click.stop @blur="submitRename(g)" ref="renameInput">
+              </template>
+              <template v-else>
+                <span @dblclick="startRename(g)">{{ g.name }}</span>
+                <span style="display:flex;align-items:center;gap:4px;">
+                  <span class="gm-count">{{ g.members.length }} 个账号</span>
+                  <span class="gm-actions" @click.stop>
+                    <button @click="startRename(g)" title="改名">✏️</button>
+                    <button class="danger" @click="deleteGroup(g)" title="删除">🗑️</button>
+                  </span>
+                </span>
+              </template>
             </div>
             <div v-if="!groupData.groups.length" style="text-align:center;padding:20px;color:var(--muted-soft);font-size:13px;">暂无分组</div>
           </div>
@@ -548,6 +722,99 @@ body {
   </div>
 </div>
 
+<!-- Keyword Management Modal -->
+<div v-if="showKeywordModal" class="modal-overlay" @click.self="closeKeywordModal">
+  <div class="modal" style="width:680px;max-width:92vw;">
+    <div class="modal-header">
+      <h2>🔑 关键词监控</h2>
+      <div style="font-size:12px;color:var(--muted-soft);flex:1;margin-left:var(--space-base);">匹配评论按点赞数降序展示</div>
+      <button class="modal-close" @click="closeKeywordModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Add keyword row -->
+      <div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-base);">
+        <input v-model="newKeyword" class="form-input"
+               placeholder="输入监控关键词..." style="flex:1;"
+               @keyup.enter="addKeyword"
+               :disabled="keywordBusy">
+        <button class="btn btn-primary" @click="addKeyword"
+                :disabled="keywordBusy || !newKeyword.trim()">添加</button>
+      </div>
+
+      <!-- Keyword list -->
+      <div style="margin-bottom:var(--space-lg);">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:var(--space-sm);text-transform:uppercase;letter-spacing:0.3px;">
+          已监控关键词（{{ keywords.length }}）
+        </div>
+        <div v-if="keywords.length === 0" style="text-align:center;padding:20px;color:var(--muted-soft);font-size:13px;">
+          暂无关键词，在上方添加
+        </div>
+        <div v-for="kw in keywords" :key="kw.id"
+             style="display:flex;align-items:center;gap:var(--space-sm);
+                    padding:8px 10px;border-radius:var(--rounded-sm);
+                    background:var(--surface-soft);margin-bottom:4px;
+                    font-size:13px;">
+          <span style="flex:1;display:flex;align-items:center;gap:6px;">
+            <span style="padding:2px 8px;border-radius:var(--rounded-full);
+                         background:var(--primary-disabled);color:var(--primary);
+                         font-size:11px;font-weight:600;">{{ kw.keyword }}</span>
+            <span v-if="kw.platform" style="font-size:11px;color:var(--muted-soft);">
+              {{ platformLabels[kw.platform] }}
+            </span>
+            <span v-else style="font-size:11px;color:var(--muted-soft);">全平台</span>
+          </span>
+          <span style="font-size:11px;color:var(--muted-soft);">
+            {{ kw.created_at ? kw.created_at.slice(5,16) : '' }}
+          </span>
+          <span class="gm-remove" @click="deleteKeyword(kw.id)">删除</span>
+        </div>
+      </div>
+
+      <!-- Matched comments section -->
+      <div style="border-top:1px solid var(--hairline-soft);padding-top:var(--space-base);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-sm);">
+          <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;">
+            匹配评论（{{ matchedComments.length }}）
+          </div>
+          <div style="display:flex;gap:var(--space-sm);align-items:center;">
+            <select v-model="commentKeywordFilter" style="font-size:12px;padding:4px 8px;border:1px solid var(--hairline);border-radius:var(--rounded-sm);background:var(--canvas);color:var(--muted);">
+              <option value="">全部关键词</option>
+              <option v-for="kw in keywords" :key="kw.id" :value="kw.keyword">{{ kw.keyword }}</option>
+            </select>
+            <button class="btn btn-secondary" style="height:30px;padding:0 12px;font-size:12px;" @click="refreshMatchedComments">🔄 刷新</button>
+          </div>
+        </div>
+        <div v-if="matchedComments.length === 0" style="text-align:center;padding:30px 0;color:var(--muted-soft);font-size:13px;">
+          <div style="font-size:32px;margin-bottom:8px;">💬</div>
+          <div>暂无匹配评论，采集到评论后自动匹配</div>
+        </div>
+        <div v-for="(c, i) in matchedComments" :key="c.id"
+             style="padding:10px 12px;border-radius:var(--rounded-sm);
+                    background:var(--surface-soft);margin-bottom:6px;
+                    font-size:13px;line-height:1.5;">
+          <div style="display:flex;align-items:center;gap:var(--space-sm);margin-bottom:4px;">
+            <span style="font-weight:600;font-size:12px;">{{ c.author_name || '匿名' }}</span>
+            <span style="font-size:11px;color:var(--muted-soft);">👍 {{ c.digg_count || 0 }}</span>
+            <span style="font-size:11px;color:var(--legal-link);flex:1;text-align:right;"
+                  :title="c.video_title">{{ (c.video_title || '').slice(0,24) }}{{ (c.video_title || '').length > 24 ? '...' : '' }}</span>
+          </div>
+          <div style="color:var(--ink);">{{ c.content }}</div>
+          <div v-if="c.matched_kw" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+            <span v-for="mk in c.matched_kw.split(',')" :key="mk"
+                  style="padding:1px 6px;border-radius:var(--rounded-full);
+                         background:#fff3cd;color:#856404;font-size:10px;font-weight:600;">
+              🔍 {{ mk }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="closeKeywordModal">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
 const { createApp, ref, computed, onMounted } = Vue;
@@ -556,6 +823,7 @@ createApp({
   setup() {
     const accounts = ref([]);
     const loading = ref(true);
+    const error = ref('');
     const compareGroups = ref([]);
 
     /* ── Login / Relogin State ── */
@@ -565,6 +833,10 @@ createApp({
     const loginAccountInput = ref('');
     const loginBusy = ref(false);
     const loginStatus = ref('');
+    const loginToken = ref('');
+    const qrStatus = ref('idle');  // idle | generating | waiting_scan | success | expired | error
+    let qrPollInterval = null;
+    const qrImageUrl = computed(() => loginToken.value ? '/api/qr-image?token=' + loginToken.value : '');
     const relogining = ref(false);
     const reloginMsg = ref('');
 
@@ -573,6 +845,16 @@ createApp({
     const groupData = ref({ groups: [], ungrouped: [] });
     const selectedGroup = ref(null);
     const newGroupName = ref('');
+    const editingGroupId = ref(null);
+    const editingGroupName = ref('');
+
+    /* ── Keyword Monitoring State ── */
+    const showKeywordModal = ref(false);
+    const keywords = ref([]);
+    const newKeyword = ref('');
+    const keywordBusy = ref(false);
+    const matchedComments = ref([]);
+    const commentKeywordFilter = ref('');
 
     const ungroupedList = computed(() => {
       if (selectedGroup.value) {
@@ -632,6 +914,52 @@ createApp({
         });
         newGroupName.value = '';
         await fetchGroups();
+        loadCompare();
+      } catch(e) {}
+    }
+
+    function startRename(g) {
+      editingGroupId.value = g.id;
+      editingGroupName.value = g.name;
+    }
+
+    function cancelRename() {
+      editingGroupId.value = null;
+      editingGroupName.value = '';
+    }
+
+    async function submitRename(g) {
+      const name = editingGroupName.value.trim();
+      if (!name || name === g.name) { cancelRename(); return; }
+      try {
+        await fetch('/api/groups', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'rename', id: g.id, name }),
+        });
+        cancelRename();
+        await fetchGroups();
+        loadCompare();
+        // 更新已选中的引用
+        if (selectedGroup.value && selectedGroup.value.id === g.id) {
+          selectedGroup.value.name = name;
+        }
+      } catch(e) { cancelRename(); }
+    }
+
+    async function deleteGroup(g) {
+      if (!confirm(`确定删除分组「${g.name}」吗？\n成员将回到未分组状态。`)) return;
+      try {
+        await fetch('/api/groups', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'delete', id: g.id }),
+        });
+        if (selectedGroup.value && selectedGroup.value.id === g.id) {
+          selectedGroup.value = null;
+        }
+        await fetchGroups();
+        loadCompare();
       } catch(e) {}
     }
 
@@ -644,6 +972,7 @@ createApp({
           body: JSON.stringify({ action: 'add_member', group_id: selectedGroup.value.id, account_id: account.id }),
         });
         await fetchGroups();
+        loadCompare();
       } catch(e) {}
     }
 
@@ -658,6 +987,65 @@ createApp({
           selectedGroup.value.members = selectedGroup.value.members.filter(m => m.id !== member.id);
         }
         await fetchGroups();
+        loadCompare();
+      } catch(e) {}
+    }
+
+    /* ── Keyword Monitoring ── */
+    function openKeywordModal() {
+      showKeywordModal.value = true;
+      newKeyword.value = '';
+      commentKeywordFilter.value = '';
+      fetchKeywords();
+      refreshMatchedComments();
+    }
+
+    function closeKeywordModal() {
+      showKeywordModal.value = false;
+    }
+
+    async function fetchKeywords() {
+      try {
+        const resp = await fetch('/api/keywords');
+        const d = await resp.json();
+        keywords.value = d.keywords || [];
+      } catch(e) {}
+    }
+
+    async function addKeyword() {
+      const kw = newKeyword.value.trim();
+      if (!kw) return;
+      keywordBusy.value = true;
+      try {
+        await fetch('/api/keywords', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'add', keyword: kw }),
+        });
+        newKeyword.value = '';
+        await fetchKeywords();
+      } catch(e) {}
+      finally { keywordBusy.value = false; }
+    }
+
+    async function deleteKeyword(kid) {
+      try {
+        await fetch('/api/keywords', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'delete', id: kid }),
+        });
+        await fetchKeywords();
+      } catch(e) {}
+    }
+
+    async function refreshMatchedComments() {
+      try {
+        const kw = commentKeywordFilter.value;
+        const url = '/api/comments/matched' + (kw ? '?keyword=' + encodeURIComponent(kw) : '');
+        const resp = await fetch(url);
+        const d = await resp.json();
+        matchedComments.value = d.comments || [];
       } catch(e) {}
     }
 
@@ -669,10 +1057,25 @@ createApp({
       loginAccountInput.value = '';
       loginStatus.value = '';
       loginBusy.value = false;
+      loginToken.value = '';
+      qrStatus.value = 'idle';
+      clearQrPolling();
     }
 
     function closeLoginModal() {
+      clearQrPolling();
       showLoginModal.value = false;
+      qrStatus.value = 'idle';
+      loginToken.value = '';
+      loginBusy.value = false;
+      fetchAccounts();
+    }
+
+    function clearQrPolling() {
+      if (qrPollInterval) {
+        clearInterval(qrPollInterval);
+        qrPollInterval = null;
+      }
     }
 
     function onLoginAccountChange() {
@@ -684,6 +1087,33 @@ createApp({
       }
     }
 
+    function startQrPolling() {
+      clearQrPolling();
+      qrPollInterval = setInterval(async () => {
+        try {
+          const resp = await fetch('/api/qr-login/status?token=' + loginToken.value);
+          const st = await resp.json();
+          if (st.status === 'waiting_scan') {
+            qrStatus.value = 'waiting_scan';
+            loginStatus.value = '等待扫码...';
+          } else if (st.status === 'success') {
+            qrStatus.value = 'success';
+            loginStatus.value = '✅ 扫码登录成功';
+            clearQrPolling();
+            setTimeout(() => { closeLoginModal(); }, 2000);
+          } else if (st.status === 'expired') {
+            qrStatus.value = 'expired';
+            loginStatus.value = '二维码已过期，请重新生成';
+            clearQrPolling();
+          } else if (st.status === 'error') {
+            qrStatus.value = 'error';
+            loginStatus.value = '生成失败: ' + (st.error || '');
+            clearQrPolling();
+          }
+        } catch(e) {}
+      }, 1500);
+    }
+
     async function doLogin() {
       const account = loginAccountFinal.value;
       if (!account) {
@@ -691,7 +1121,8 @@ createApp({
         return;
       }
       loginBusy.value = true;
-      loginStatus.value = '正在打开扫码窗口...';
+      loginStatus.value = '正在生成二维码...';
+      qrStatus.value = 'generating';
       try {
         const resp = await fetch('/api/login', {
           method: 'POST',
@@ -702,61 +1133,54 @@ createApp({
           }),
         });
         const result = await resp.json();
-        if (result.status === 'ok') {
-          loginStatus.value = '✅ 扫码窗口已打开，请在 Windows 上扫码登录';
-          setTimeout(() => { closeLoginModal(); loginBusy.value = false; }, 2000);
-          fetchAccounts();
-        } else {
-          loginStatus.value = result.message || '请求失败';
+        if (result.status === 'ok' && result.token) {
+          loginToken.value = result.token;
           loginBusy.value = false;
+          // Start polling for QR image and status
+          startQrPolling();
+        } else {
+          loginStatus.value = result.message || result.error || '请求失败';
+          loginBusy.value = false;
+          qrStatus.value = 'error';
         }
       } catch (e) {
         loginStatus.value = '请求失败: ' + e.message;
         loginBusy.value = false;
+        qrStatus.value = 'error';
       }
     }
 
-    /* ── Relogin (from failed cookie card) ── */
-    async function reloginAccount(a) {
-      relogining.value = true;
-      reloginMsg.value = '正在打开浏览器扫码登录 ' + platformLabels[a.platform] + '/' + (a.nickname || a.account_name) + '...';
-      try {
-        const resp = await fetch('/api/relogin/' + a.platform + '/' + a.account_name, { method: 'POST' });
-        const d = await resp.json();
-        if (d.status !== 'ok') {
-          reloginMsg.value = '启动失败: ' + (d.message || '');
-          setTimeout(() => { relogining.value = false; }, 3000);
-          return;
-        }
-        const ci = setInterval(async () => {
-          try {
-            const r = await fetch('/api/relogin/status');
-            const st = await r.json();
-            if (st.status === 'success') {
-              reloginMsg.value = '✅ 扫码登录成功！';
-              clearInterval(ci);
-              setTimeout(() => { relogining.value = false; }, 3000);
-              fetchAccounts();
-            } else if (st.status === 'running') {
-              reloginMsg.value = st.message || '等待扫码...';
-            } else {
-              reloginMsg.value = '状态: ' + (st.message || '');
-            }
-          } catch(e) {}
-        }, 1500);
-      } catch (e) {
-        reloginMsg.value = '启动失败: ' + e.message;
-        setTimeout(() => { relogining.value = false; }, 3000);
-      }
+    function regenerateQR() {
+      qrStatus.value = 'idle';
+      loginStatus.value = '';
+      loginToken.value = '';
+      loginBusy.value = false;
+    }
+
+    /* ── Relogin (from failed cookie card) — now uses embedded QR modal ── */
+    function reloginAccount(a) {
+      // Open login modal pre-filled with this account's platform and name
+      showLoginModal.value = true;
+      loginPlatform.value = a.platform;
+      loginAccountKey.value = a.platform + ':' + a.account_name;
+      loginAccountInput.value = '';
+      loginStatus.value = '';
+      loginBusy.value = false;
+      loginToken.value = '';
+      qrStatus.value = 'idle';
+      clearQrPolling();
     }
 
     async function fetchAccounts() {
       try {
+        error.value = '';
         const resp = await fetch('/api/accounts');
+        if (!resp.ok) throw new Error(resp.statusText);
         const d = await resp.json();
         accounts.value = d.accounts || [];
         loadCompare();
       } catch (e) {
+        error.value = '账号数据加载失败: ' + e.message;
         console.error('Failed:', e);
       } finally {
         loading.value = false;
@@ -819,22 +1243,29 @@ createApp({
     onMounted(fetchAccounts);
 
     return {
-      accounts, loading, compareGroups,
+      accounts, loading, error, compareGroups,
       platformLabels, platformColor, platformIcon, cookieLabel,
       fmtNum, fmtDate, platLabel,
       /* Login */
       showLoginModal, loginPlatform, loginAccountKey, loginAccountInput,
-      loginBusy, loginStatus, loginAccountFinal,
-      openLoginModal, closeLoginModal, onLoginAccountChange, doLogin,
+      loginBusy, loginStatus, loginToken, qrStatus, qrImageUrl, loginAccountFinal,
+      openLoginModal, closeLoginModal, onLoginAccountChange, doLogin, regenerateQR,
       /* Relogin */
       relogining, reloginMsg, reloginAccount,
       /* Group Management */
       showGroupModal, groupData, selectedGroup, newGroupName, ungroupedList,
+      editingGroupId, editingGroupName,
       openGroupModal, closeGroupModal, selectGroup, createGroup,
+      startRename, cancelRename, submitRename, deleteGroup,
       addMember, removeMember,
+      /* Keyword Monitoring */
+      showKeywordModal, keywords, newKeyword, keywordBusy,
+      matchedComments, commentKeywordFilter,
+      openKeywordModal, closeKeywordModal,
+      addKeyword, deleteKeyword, refreshMatchedComments,
     };
   }
 }).mount('#app');
 </script>
-</body>
+</div></body>
 </html>

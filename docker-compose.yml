@@ -1,0 +1,22 @@
+# Social Monitor — Docker Compose 一键部署
+# 用法: docker compose up -d
+version: "3.8"
+
+services:
+  social-monitor:
+    build: .
+    container_name: social-monitor
+    ports:
+      - "${SM_PORT:-5408}:5408"
+    volumes:
+      # 持久化数据（数据库、Cookie、日志）
+      - social-monitor-data:/app/data
+    environment:
+      - SM_DATA_DIR=/app/data
+      - SM_PORT=5408
+      - TZ=${TZ:-Asia/Shanghai}
+    restart: unless-stopped
+
+volumes:
+  social-monitor-data:
+    name: social-monitor-data

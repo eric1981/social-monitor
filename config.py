@@ -5,6 +5,7 @@ Social Monitor 配置模块 — 跨平台（Windows / WSL / macOS / Linux）
 import json
 import platform
 import re
+import sys
 from pathlib import Path
 
 _CONFIG_PATH = Path(__file__).parent / "config.json"
@@ -33,10 +34,15 @@ def is_linux() -> bool:
 # ── 默认值 ──
 _DEFAULTS = {
     "server": {"port": 5408},
+    "windows": {
+        "python_path": "C:\\Users\\NINGMEI\\AppData\\Local\\Python\\bin\\python.exe"
+    },
     "collect": {
         "cookie_max_age_days": 30,
         "timeout_seconds": 120,
         "retry_delay_seconds": 3,
+        "retry_max": 3,
+        "retry_backoff_base": 3,
     },
     "schedule": {
         "max_retries": 3,
@@ -120,6 +126,11 @@ def server_port() -> int:
     return get()["server"]["port"]
 
 
+def windows_python_path() -> str:
+    """When running under WSL, return the Windows Python executable path for Playwright scripts."""
+    return get().get("windows", {}).get("python_path", sys.executable)
+
+
 def collect_cookie_max_age_days() -> int:
     return get()["collect"]["cookie_max_age_days"]
 
@@ -130,6 +141,14 @@ def collect_timeout() -> int:
 
 def collect_retry_delay() -> int:
     return get()["collect"]["retry_delay_seconds"]
+
+
+def collect_retry_max() -> int:
+    return get()["collect"]["retry_max"]
+
+
+def collect_retry_backoff_base() -> int:
+    return get()["collect"]["retry_backoff_base"]
 
 
 def schedule_max_retries() -> int:

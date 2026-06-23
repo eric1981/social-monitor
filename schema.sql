@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     profile_like_count  INTEGER DEFAULT 0,   -- 主页获赞数
     account_stats_updated DATETIME,           -- 账号统计信息上次更新时间
     cookie_status       TEXT DEFAULT 'unknown', -- cookie状态: ok/failed/unknown
+    consecutive_failures INTEGER DEFAULT 0,     -- 连续采集失败次数（成功时重置）
     UNIQUE(platform, account_name)
 );
 
@@ -57,3 +58,37 @@ CREATE INDEX IF NOT EXISTS idx_videos_account
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_collected
     ON snapshots(collected_at);
+
+-- ============================================================
+-- 关键词监控（Feature 3）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS keywords (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword     TEXT NOT NULL,
+    platform    TEXT,           -- NULL = 所有平台
+    account_id  INTEGER,        -- NULL = 所有账号
+    color       TEXT DEFAULT 'blue',  -- 标签颜色提示
+    is_active   INTEGER DEFAULT 1,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 评论数据存储（用于关键词匹配）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS comments (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id     INTEGER NOT NULL REFERENCES videos(id),
+    platform     TEXT NOT NULL,
+    comment_id   TEXT NOT NULL,
+    author_name  TEXT,
+    content      TEXT NOT NULL,
+    digg_count   INTEGER DEFAULT 0,
+    create_time  DATETIME,
+    collected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    matched_kw   TEXT DEFAULT '',   -- 逗号分隔的匹配关键词
+    UNIQUE(platform, comment_id)
+);
+CREATE INDEX IF NOT EXISTS idx_comments_matched
+    ON comments(matched_kw);
+CREATE INDEX IF NOT EXISTS idx_comments_video
+    ON comments(video_id);

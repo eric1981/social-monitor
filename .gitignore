@@ -1,12 +1,42 @@
-# Cookie files (sensitive)
+# ── Sensitive ──────────────────────────────────
 social-auto-upload/
 cookies/
+*.db
+*.db-shm
+*.db-wal
+collect_status.json
+collect_summary.json
+relogin_status.json
 
-# Python
+# ── Python ─────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
 
-# Temp
+# ── Temp & Logs ────────────────────────────────
 tmp/
+logs/
 *.log
-monitor.db
+
+# ── System files ───────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*:Zone.Identifier
+
+# ── IDE ────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+
+# ── Environment ────────────────────────────────
+.env
+.env.*
+!.env.example

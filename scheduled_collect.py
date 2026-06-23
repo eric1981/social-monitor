@@ -32,7 +32,7 @@ def run_collector(platform):
     """运行采集器，返回 (成功数, 失败数)"""
     log(f"开始采集 {platform}...")
     result = subprocess.run(
-        ['python3', str(MONITOR_DIR / 'collector.py'), '--platform', platform],
+        [sys.executable, str(MONITOR_DIR / 'collector.py'), '--platform', platform],
         capture_output=True, text=False, timeout=600
     )
     out = result.stdout.decode('utf-8', errors='replace') if result.stdout else ''

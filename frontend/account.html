@@ -177,6 +177,15 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty { text-align: center; padding: var(--space-xxl); color: var(--muted); }
 
+/* Error Banner */
+.error-banner {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-md) var(--space-base);
+  background: #fff0f0; border: 1px solid #ffc9c9;
+  border-radius: var(--rounded-md); margin-bottom: var(--space-lg);
+  font-size: 13px; color: var(--primary);
+}
+
 /* Collect Stats Button */
 .collect-stats-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -214,6 +223,12 @@ body {
       <a href="/settings.html">配置</a>
     </div>
   </nav>
+
+  <!-- Error Banner -->
+  <div v-if="error" class="error-banner">
+    <span>⚠️ {{ error }}</span>
+    <button class="btn btn-secondary" style="height:30px;padding:0 14px;font-size:12px;" @click="fetchData">重试</button>
+  </div>
 
   <!-- Page Actions -->
   <div v-if="data" class="page-actions">
@@ -307,7 +322,11 @@ body {
     </div>
 
     <!-- Videos -->
-    <div v-if="displayVideos.length === 0" class="empty">暂无视频数据</div>
+    <div v-if="displayVideos.length === 0" class="empty">
+      <div style="font-size:32px;margin-bottom:var(--space-base)">🎬</div>
+      <div>还没有视频数据</div>
+      <div style="font-size:13px;color:var(--muted-soft);margin-top:var(--space-sm);">点击「采集账号统计」按钮获取该账号的视频数据</div>
+    </div>
     <div v-else class="card-grid">
       <a v-for="v in paginatedVideos" :key="v.aweme_id"
          :href="v.url || '#'" target="_blank" rel="noopener"
@@ -359,6 +378,7 @@ createApp({
   setup() {
     const data = ref(null);
     const loading = ref(true);
+    const error = ref('');
     const currentTab = ref('all');
     const collecting = ref(false);
     const growthPoints = ref([]);
@@ -439,14 +459,16 @@ createApp({
 
     async function fetchData() {
       if (!accountId) { loading.value = false; return; }
+      error.value = '';
       loading.value = true;
       try {
         const resp = await fetch('/api/account/' + accountId);
-        if (!resp.ok) { data.value = null; return; }
+        if (!resp.ok) { data.value = null; error.value = '账号数据加载失败: ' + resp.statusText; return; }
         data.value = await resp.json();
         // 加载增长数据
         loadGrowth();
       } catch (e) {
+        error.value = '网络请求失败: ' + e.message;
         console.error('Failed:', e);
         data.value = null;
       } finally {
@@ -514,7 +536,7 @@ createApp({
     });
 
     return {
-      data, loading, currentTab, collecting,
+      data, loading, error, currentTab, collecting,
       accountId, accountName, platformLabels,
       platformData, displayVideos, growthPoints,
       vidPage, vidPageSize, totalVidPages, paginatedVideos,

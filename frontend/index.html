@@ -113,6 +113,19 @@ body {
 .collect-log .cl-relogin:hover { color: #99ddff; }
 .collect-log .cl-relogin-progress { color: #ffd43b; font-size: 12px; padding: 4px 0; }
 
+/* ── Platform Trend ──────────────────────────────── */
+.platform-trend-section {
+  background: var(--surface-soft); border-radius: var(--rounded-md);
+  padding: var(--space-base); margin-bottom: var(--space-lg);
+  border: 1px solid var(--hairline-soft);
+}
+.trend-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: var(--space-sm);
+}
+.trend-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.trend-range { display: flex; gap: 4px; }
+
 /* ── Health Bar ───────────────────────────────────── */
 .health-bar {
   display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg);
@@ -133,6 +146,21 @@ body {
 }
 .health-pill .hp-tag.fail { background: #ffe3e3; color: #e03131; }
 .health-pill .hp-tag.stale { background: #fff3bf; color: #e67700; }
+
+/* ── Account Health Traffic Lights ───────────────── */
+.health-traffic-bar {
+  display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+.traffic-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 14px; border-radius: var(--rounded-full);
+  font-size: 13px; font-weight: 500;
+}
+.traffic-pill.green { background: #ecfdf5; color: #065f46; }
+.traffic-pill.yellow { background: #fffbeb; color: #92400e; }
+.traffic-pill.red { background: #fef2f2; color: #991b1b; }
+.traffic-pill.gray { background: #f9fafb; color: #6b7280; }
 
 /* ── Pagination ───────────────────────────────────── */
 .pagination {
@@ -294,7 +322,30 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Empty ───────────────────────────────────────── */
+/* ── Error Banner ───────────────────────────────── */
+.error-banner {
+  display: flex; align-items: center; gap: var(--space-base);
+  padding: var(--space-md) var(--space-base);
+  background: #fff0f0; border: 1px solid #ffc9c9;
+  border-radius: var(--rounded-md); margin-bottom: var(--space-lg);
+  font-size: 13px; color: var(--primary);
+}
+
+/* ── Alert Banner ────────────────────────────────── */
+.alert-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-md) var(--space-base);
+  border-radius: var(--rounded-md); margin-bottom: var(--space-lg);
+  font-size: 13px; gap: var(--space-sm);
+}
+.alert-banner.warn { background: #fff8f0; border: 1px solid #ffd43b; color: #e67700; }
+.alert-banner.error { background: #fff0f0; border: 1px solid #ffc9c9; color: var(--primary); }
+.alert-banner .alert-msg { flex: 1; }
+.alert-banner .alert-close {
+  background: none; border: none; cursor: pointer; font-size: 16px;
+  color: inherit; opacity: 0.6; padding: 2px 6px; border-radius: var(--rounded-sm);
+}
+.alert-banner .alert-close:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 .empty { text-align: center; padding: var(--space-xxl); color: var(--muted); }
 .empty svg { width: 48px; height: 48px; stroke: var(--hairline); margin-bottom: var(--space-base); }
 
@@ -356,6 +407,91 @@ body {
   border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
 }
 
+/* ── Onboarding Welcome Card ─────────────────────── */
+.welcome-hero {
+  text-align: center; padding: var(--space-xxl) var(--space-xl);
+  max-width: 560px; margin: var(--space-xl) auto;
+  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--rounded-lg);
+}
+.welcome-hero .welcome-icon { font-size: 48px; margin-bottom: var(--space-base); }
+.welcome-hero h2 { font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: var(--space-sm); }
+.welcome-hero .welcome-sub { font-size: 14px; color: var(--muted); margin-bottom: var(--space-xl); line-height: 1.5; }
+.welcome-steps {
+  display: flex; gap: var(--space-md); margin-bottom: var(--space-xl);
+  justify-content: center; flex-wrap: wrap;
+}
+.welcome-step {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--space-base); border-radius: var(--rounded-md);
+  background: var(--canvas); border: 1px solid var(--hairline-soft);
+  min-width: 140px; transition: transform 0.15s;
+}
+.welcome-step:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.welcome-step .step-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--primary); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; margin-bottom: var(--space-sm);
+}
+.welcome-step .step-num.done { background: #22c55e; }
+.welcome-step .step-icon { font-size: 28px; margin-bottom: var(--space-xs); }
+.welcome-step .step-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.welcome-step .step-hint { font-size: 11px; color: var(--muted-soft); margin-top: 2px; }
+.welcome-actions { display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap; }
+.welcome-actions .btn { height: 44px; padding: 0 28px; font-size: 15px; border-radius: var(--rounded-sm); }
+
+/* ── Step Progress Tracker ──────────────────────── */
+.step-tracker {
+  display: flex; align-items: center; gap: var(--space-sm);
+  margin-bottom: var(--space-lg); flex-wrap: wrap;
+  justify-content: center;
+}
+.step-tracker .st-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--rounded-full);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-soft); color: var(--muted-soft);
+  transition: all 0.2s;
+}
+.step-tracker .st-item.active {
+  background: var(--primary); color: var(--on-primary);
+}
+.step-tracker .st-item.done {
+  background: #ecfdf5; color: #065f46;
+}
+.step-tracker .st-arrow { color: var(--hairline); font-size: 12px; }
+
+/* ── Tooltip System ─────────────────────────────── */
+.has-tooltip {
+  position: relative; cursor: help;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--surface-strong); color: var(--muted);
+  font-size: 11px; font-weight: 700; vertical-align: middle;
+  margin-left: 4px; transition: all 0.15s;
+  border: none; font-family: var(--font);
+}
+.has-tooltip:hover { background: var(--ink); color: var(--canvas); }
+.has-tooltip .tooltip-text {
+  visibility: hidden; opacity: 0;
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink); color: var(--canvas);
+  padding: 8px 14px; border-radius: var(--rounded-sm);
+  font-size: 12px; font-weight: 400;
+  white-space: nowrap; z-index: 200;
+  pointer-events: none; transition: opacity 0.15s;
+}
+.has-tooltip .tooltip-text::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+.has-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 744px) {
   .app { padding: var(--space-base); }
@@ -365,6 +501,9 @@ body {
   .card-grid { grid-template-columns: 1fr; }
   .search-bar { height: 48px; }
   .search-field .value { font-size: 12px; }
+  .welcome-hero { padding: var(--space-lg) var(--space-base); }
+  .welcome-steps { flex-direction: column; align-items: center; }
+  .welcome-step { min-width: auto; width: 100%; max-width: 280px; }
 }
 </style>
 </head>
@@ -374,18 +513,31 @@ body {
   <nav class="top-nav">
     <a href="/" class="logo">📡 <span>Social Monitor</span></a>
     <div class="nav-links">
-      <a href="/" class="active">看板</a>
-      <a href="/accounts.html">账号管理</a>
+      <a href="/" class="active">看板<span class="has-tooltip">?<span class="tooltip-text">查看采集到的视频数据和播放趋势</span></span></a>
+      <a href="/accounts.html">账号管理<span class="has-tooltip">?<span class="tooltip-text">添加/管理监控账号，扫码登录平台</span></span></a>
       <a href="/settings.html">配置</a>
     </div>
     <div class="nav-right">
-      <a href="/api/export/videos" style="font-size:12px;">导出CSV</a>
+      <a href="/api/export/videos" style="font-size:12px;">导出CSV<span class="has-tooltip">?<span class="tooltip-text">导出当前筛选结果到CSV文件</span></span></a>
       <a @click="triggerCollect" style="cursor:pointer;">
         <span v-if="collecting" class="spinner-sm" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:4px;"></span>
-        <span v-else>⬇</span> 抓取
-      </a>
+        <span v-else>⬇</span> 抓取<span class="has-tooltip">?<span class="tooltip-text">手动触发一次全平台数据采集</span></span></a>
     </div>
   </nav>
+
+  <!-- Alert Banner -->
+  <div v-if="alerts.length" class="alert-banner" v-for="alert in alerts" :key="alert.key"
+       :class="alert.type === 'consecutive_failure' ? 'error' : 'warn'">
+    <span class="alert-msg">
+      <template v-if="alert.type === 'cookie_expiring'">
+        ⚠️ Cookie即将过期：{{ alert.nickname }}（{{ alert.platform }}）还剩 {{ alert.days_left }} 天
+      </template>
+      <template v-else>
+        🚨 采集连续失败：{{ alert.nickname }}（{{ alert.platform }}）已连续失败 {{ alert.consecutive_failures }} 次
+      </template>
+    </span>
+    <button class="alert-close" @click="dismissAlert(alert)">✕</button>
+  </div>
 
   <!-- Platform Tabs -->
   <div class="platform-tabs">
@@ -394,6 +546,28 @@ body {
     <a :class="{active: tab==='kuaishou'}" @click="setTab('kuaishou')"><img src="kuaishou.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 快手</a>
     <a :class="{active: tab==='xiaohongshu'}" @click="setTab('xiaohongshu')"><img src="xiaohongshu.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 小红书</a>
     <a :class="{active: tab==='shipinhao'}" @click="setTab('shipinhao')"><img src="shipinhao.png" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"> 视频号</a>
+  </div>
+
+  <!-- Error Banner -->
+  <div v-if="error" class="error-banner">
+    <span>⚠️ {{ error }}</span>
+    <button class="btn btn-secondary" style="height:30px;padding:0 14px;font-size:12px;" @click="refreshData">重试</button>
+  </div>
+
+  <!-- Platform Trend Chart -->
+  <div v-if="tab !== 'all'" class="platform-trend-section">
+    <div class="trend-header">
+      <span class="trend-title">📈 {{ tab === 'douyin' ? '抖音' : tab === 'kuaishou' ? '快手' : tab === 'xiaohongshu' ? '小红书' : '视频号' }} 播放趋势</span>
+      <span class="trend-range">
+        <span class="quick-date" :class="{active: trendDays===7}" @click="trendDays=7; fetchPlatformHistory()">7天</span>
+        <span class="quick-date" :class="{active: trendDays===30}" @click="trendDays=30; fetchPlatformHistory()">30天</span>
+      </span>
+    </div>
+    <div v-if="platformTrendLoading" class="loading" style="padding:20px;"><div class="spinner"></div></div>
+    <div v-else-if="platformTrendPoints.length" style="position:relative;height:180px;">
+      <canvas id="platformTrendChart"></canvas>
+    </div>
+    <div v-else style="text-align:center;padding:16px;color:var(--muted-soft);font-size:13px;">暂无趋势数据</div>
   </div>
 
   <!-- Collect Log -->
@@ -410,6 +584,15 @@ body {
     <div v-if="relogining" class="cl-row cl-relogin-progress">{{ reloginMsg }}</div>
   </div>
 
+  <!-- Step Progress Tracker (during collect) -->
+  <div v-if="collecting" class="step-tracker">
+    <span class="st-item" :class="{active: collectStep===1, done: collectStep>1}">① 启动采集</span>
+    <span class="st-arrow">→</span>
+    <span class="st-item" :class="{active: collectStep===2, done: collectStep>2}">② 抓取数据</span>
+    <span class="st-arrow">→</span>
+    <span class="st-item" :class="{active: collectStep===3, done: collectStep>3}">③ 保存结果</span>
+  </div>
+
   <!-- Platform Health -->
   <div class="health-bar" v-if="Object.keys(health).length">
     <span v-for="(h, p) in health" :key="p" class="health-pill" :class="{warn: h.failed > 0 || h.days_stale > 2}">
@@ -418,6 +601,14 @@ body {
       <span v-if="h.failed > 0" class="hp-tag fail">⚠{{ h.failed }}</span>
       <span v-if="h.days_stale > 2" class="hp-tag stale">📅 {{ h.days_stale }}d</span>
     </span>
+  </div>
+
+  <!-- Account Health Traffic Lights -->
+  <div class="health-traffic-bar" v-if="accountsHealth && (accountsHealth.green + accountsHealth.yellow + accountsHealth.red + accountsHealth.gray) > 0">
+    <span class="traffic-pill green">🟢 {{ accountsHealth.green }} 健康</span>
+    <span class="traffic-pill yellow">🟡 {{ accountsHealth.yellow }} 持平</span>
+    <span class="traffic-pill red">🔴 {{ accountsHealth.red }} 下降</span>
+    <span class="traffic-pill gray" v-if="accountsHealth.gray > 0">⚪ {{ accountsHealth.gray }} 无数据</span>
   </div>
 
   <!-- Stats -->
@@ -498,12 +689,17 @@ body {
       <option value="play_count">播放量</option>
       <option value="digg_count">点赞数</option>
       <option value="comment_count">评论数</option>
+      <option value="play_delta">播放增量</option>
       <option value="first_seen">发布时间</option>
     </select>
     <select v-model="sortOrder" class="sort-select">
       <option value="desc">降序</option>
       <option value="asc">升序</option>
     </select>
+    <span class="rank-toggle">
+      <span class="quick-date" :class="{active: rankMode==='best'}" @click="setRank('best')">表现最好</span>
+      <span class="quick-date" :class="{active: rankMode==='worst'}" @click="setRank('worst')">表现最差</span>
+    </span>
     <span class="sort-count">{{ filteredVideos.length }} 条结果</span>
   </div>
 
@@ -521,10 +717,52 @@ body {
     <div>加载中...</div>
   </div>
 
-  <!-- Empty -->
-  <div v-else-if="filteredVideos.length === 0" class="empty">
+  <!-- Welcome Hero (first-time: no accounts, no data) -->
+  <div v-if="!loading && !error && data.accounts.length === 0 && data.videos.length === 0" class="welcome-hero">
+    <div class="welcome-icon">👋</div>
+    <h2>欢迎使用 Social Monitor</h2>
+    <div class="welcome-sub">跨平台社交媒体数据监控，3 步开始追踪你的内容表现</div>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="step-num">①</div>
+        <div class="step-icon">➕</div>
+        <div class="step-title">添加账号</div>
+        <div class="step-hint">选择平台，输入账号名</div>
+      </div>
+      <div class="welcome-step">
+        <div class="step-num">②</div>
+        <div class="step-icon">📱</div>
+        <div class="step-title">扫码登录</div>
+        <div class="step-hint">手机扫码完成认证</div>
+      </div>
+      <div class="welcome-step">
+        <div class="step-num">③</div>
+        <div class="step-icon">📊</div>
+        <div class="step-title">开始采集</div>
+        <div class="step-hint">自动获取播放数据</div>
+      </div>
+    </div>
+    <div class="welcome-actions">
+      <a href="/accounts.html" class="btn btn-primary" style="text-decoration:none;">➕ 前往添加账号</a>
+      <button class="btn btn-secondary" @click="triggerCollect" :disabled="collecting">⬇ 直接采集</button>
+    </div>
+  </div>
+
+  <!-- Empty (has accounts but no videos matching filters) -->
+  <div v-else-if="!loading && !error && filteredVideos.length === 0 && data.videos.length > 0" class="empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-    <div>暂无数据</div>
+    <div>还没有视频数据</div>
+    <div style="font-size:13px;color:var(--muted-soft);margin-top:var(--space-sm);">点击右上角「抓取」按钮开始采集视频数据</div>
+  </div>
+
+  <!-- Empty (has accounts, zero videos at all) -->
+  <div v-else-if="!loading && !error && data.videos.length === 0 && data.accounts.length > 0" class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    <div>还没有视频数据</div>
+    <div style="font-size:13px;color:var(--muted-soft);margin-top:var(--space-sm);">
+      已有 {{ data.accounts.length }} 个账号，点击右上角「抓取」按钮开始采集
+      <button class="btn btn-primary" style="height:32px;padding:0 14px;font-size:12px;margin-left:8px;" @click="triggerCollect" :disabled="collecting">⬇ 立即采集</button>
+    </div>
   </div>
 
   <!-- Card Grid -->
@@ -603,7 +841,8 @@ createApp({
     const sortOrder = ref('desc');
     const accountFilter = ref('');
     const quickDate = ref('');
-    const loading = ref(false);
+    const loading = ref(true);
+    const error = ref('');
     const refreshInterval = ref(0);
     const collecting = ref(false);
     const refreshing = ref(false);
@@ -615,9 +854,17 @@ createApp({
     const currentPage = ref(1);
     const pageSize = ref(24);
     const statsHistory = ref([]);
+    const rankMode = ref('');
+    const accountsHealth = ref(null);
+    const platformTrendPoints = ref([]);
+    const platformTrendLoading = ref(false);
+    const trendDays = ref(7);
+    const alerts = ref([]);
+    const collectStep = ref(0);  // 0=idle, 1=starting, 2=collecting, 3=saving
     let sparkCharts = {};
     let collectTimer = null;
     let timer = null;
+    let alertTimer = null;
 
     const data = ref({ accounts: [], videos: [] });
     const stats = computed(() => {
@@ -750,6 +997,13 @@ createApp({
         return true;
       });
       list.sort((a, b) => {
+        // 排名模式：按播放增量强制排序
+        if (rankMode.value === 'best') {
+          return ((b.play_delta || 0) - (a.play_delta || 0));
+        }
+        if (rankMode.value === 'worst') {
+          return ((a.play_delta || 0) - (b.play_delta || 0));
+        }
         const dir = sortOrder.value === 'desc' ? -1 : 1;
         if (sortBy.value === 'first_seen') {
           // 按发布时间降序 + aweme_id 二级排序确保跨平台交错
@@ -774,14 +1028,20 @@ createApp({
     });
 
     async function refreshData() {
+      loading.value = true;
       refreshing.value = true;
+      error.value = '';
       try {
         const resp = await fetch('/api/data');
+        if (!resp.ok) throw new Error(resp.statusText);
         const d = await resp.json();
         data.value = d;
+        loading.value = false;
         fetchHealth();
         fetchStatsHistory();
       } catch (e) {
+        error.value = '数据加载失败: ' + e.message;
+        loading.value = false;
         console.error('Failed to fetch:', e);
       } finally {
         refreshing.value = false;
@@ -791,18 +1051,26 @@ createApp({
     async function fetchHealth() {
       try {
         const resp = await fetch('/api/health');
-        health.value = await resp.json();
-      } catch(e) {}
+        if (!resp.ok) throw new Error(resp.statusText);
+        const d = await resp.json();
+        health.value = d;
+        accountsHealth.value = d.accounts_health || null;
+      } catch(e) {
+        error.value = error.value || '健康状态加载失败';
+      }
     }
 
     async function fetchStatsHistory() {
       try {
         const resp = await fetch('/api/stats/history');
+        if (!resp.ok) throw new Error(resp.statusText);
         const d = await resp.json();
         statsHistory.value = d.points || [];
         await new Promise(r => setTimeout(r, 100));
         renderSparkCharts();
-      } catch(e) {}
+      } catch(e) {
+        error.value = error.value || '统计历史加载失败';
+      }
     }
 
     function renderSparkCharts() {
@@ -836,10 +1104,12 @@ createApp({
     async function triggerCollect() {
       if (collecting.value) return;
       collecting.value = true;
+      collectStep.value = 1;  // 启动采集
       collectProgress.value = '采集中...\n';
       collectResults.value = [];
       try {
         await fetch('/api/collect', { method: 'POST' });
+        collectStep.value = 2;  // 抓取数据中
         collectTimer = setInterval(async () => {
           try {
             const resp = await fetch('/api/collect/log');
@@ -851,23 +1121,25 @@ createApp({
               collectProgress.value = st.lines.join('\n');
             }
             if (st.status === 'success') {
+              collectStep.value = 3;  // 保存结果
               collectProgress.value = '✅ 采集完成';
               clearInterval(collectTimer);
               collectTimer = null;
               refreshData();
-              setTimeout(() => { collecting.value = false; collectProgress.value = ''; collectResults.value = []; }, 5000);
+              setTimeout(() => { collecting.value = false; collectProgress.value = ''; collectResults.value = []; collectStep.value = 0; }, 5000);
             } else if (st.status === 'idle' || st.status === 'error') {
               clearInterval(collectTimer);
               collectTimer = null;
               collecting.value = false;
               collectProgress.value = '';
               collectResults.value = [];
+              collectStep.value = 0;
             }
           } catch(e) {}
         }, 1000);
       } catch (e) {
         collectProgress.value = '启动失败';
-        setTimeout(() => { collecting.value = false; collectProgress.value = ''; }, 2000);
+        setTimeout(() => { collecting.value = false; collectProgress.value = ''; collectStep.value = 0; }, 2000);
       }
     }
 
@@ -910,6 +1182,7 @@ createApp({
     const trendMeta = ref({});
     const trendPoints = ref([]);
     let trendChart = null;
+    let platformTrendChart = null;
 
     function closeTrendModal() {
       showTrendModal.value = false;
@@ -964,7 +1237,8 @@ createApp({
       });
     }
 
-    function setTab(t) { tab.value = t; }
+    function setTab(t) { tab.value = t; if (t !== 'all') fetchPlatformHistory(); }
+    function setRank(mode) { rankMode.value = rankMode.value === mode ? '' : mode; }
 
     function setQuickDate(d) {
       if (quickDate.value === d) { quickDate.value = ''; dateFrom.value = ''; dateTo.value = ''; return; }
@@ -992,23 +1266,96 @@ createApp({
       }
     }
 
+    async function fetchPlatformHistory() {
+      platformTrendLoading.value = true;
+      try {
+        const resp = await fetch('/api/stats/history?platform=' + tab.value);
+        const d = await resp.json();
+        platformTrendPoints.value = (d.points || []).slice(-trendDays.value);
+        platformTrendLoading.value = false;
+        await new Promise(r => setTimeout(r, 100));
+        renderPlatformTrend();
+      } catch(e) { platformTrendLoading.value = false; }
+    }
+
+    function renderPlatformTrend() {
+      const pts = platformTrendPoints.value;
+      if (!pts.length || typeof Chart === 'undefined') return;
+      const canvas = document.getElementById('platformTrendChart');
+      if (!canvas) return;
+      if (platformTrendChart) { platformTrendChart.destroy(); }
+      platformTrendChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: pts.map(p => p.date),
+          datasets: [{
+            data: pts.map(p => p.play),
+            borderColor: '#ff385c',
+            backgroundColor: 'rgba(255,56,92,0.06)',
+            fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw.toLocaleString() + ' 播放' } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+            y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: v => v >= 10000 ? (v/10000).toFixed(1)+'万' : v } }
+          }
+        }
+      });
+    }
+
+    async function fetchAlerts() {
+      try {
+        const resp = await fetch('/api/alerts');
+        if (!resp.ok) return;
+        const d = await resp.json();
+        // 过滤已关闭的预警
+        const dismissed = JSON.parse(localStorage.getItem('sm_dismissed_alerts') || '[]');
+        alerts.value = (d.alerts || []).filter(a => {
+          const key = `${a.platform}:${a.account}:${a.type}`;
+          return !dismissed.includes(key);
+        }).map(a => ({
+          ...a,
+          key: `${a.platform}:${a.account}:${a.type}`,
+        }));
+      } catch(e) {
+        // silent
+      }
+    }
+
+    function dismissAlert(alert) {
+      const dismissed = JSON.parse(localStorage.getItem('sm_dismissed_alerts') || '[]');
+      if (!dismissed.includes(alert.key)) {
+        dismissed.push(alert.key);
+        localStorage.setItem('sm_dismissed_alerts', JSON.stringify(dismissed));
+      }
+      alerts.value = alerts.value.filter(a => a.key !== alert.key);
+    }
+
     onMounted(() => {
       console.log('SocialMonitor mounted');
       refreshData();
       fetchHealth();
       fetchStatsHistory();
+      fetchAlerts();
+      alertTimer = setInterval(fetchAlerts, 60000);  // 每分钟检查预警
     });
 
     return {
       tab, searchQuery, dateFrom, dateTo, sortBy, sortOrder, accountFilter, quickDate,
-      loading, refreshInterval, refreshing, collecting, collectProgress, collectResults, relogining, reloginMsg,
+      loading, error, refreshInterval, refreshing, collecting, collectProgress, collectResults, collectStep, relogining, reloginMsg,
       data, stats, accounts, accountOptions, filteredVideos, statsHistory,
       paginatedVideos, totalPages, currentPage, pageSize,
       platformLabel, accountLabel, accountIdMap, openAccount, publishTime, proxyImage, onCoverError,
       refreshData, setTab, setAutoRefresh, triggerCollect, relogin, setQuickDate, fmtDelta,
       showTrendModal, trendLoading, trendMeta, trendPoints,
       showTrend, closeTrendModal, highlightPoint,
-      health, fetchHealth,
+      health, fetchHealth, accountsHealth,
+      rankMode, setRank,
+      platformTrendPoints, platformTrendLoading, trendDays, fetchPlatformHistory,
+      alerts, fetchAlerts, dismissAlert,
     };
   }
 }).mount('#app');
