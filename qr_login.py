@@ -27,7 +27,7 @@ PLATFORM_CONFIG = {
     'douyin': {
         'cookie_dir': 'douyin_uploader',
         'login_url': 'https://creator.douyin.com/login',
-        'qr_selector': 'img[src*="qrcode"], .qrcode-img, .login-qrcode img, canvas[class*="qr"]',
+        'qr_selector': 'img[src*="qrcode"], .qrcode-img, .login-qrcode img, canvas[class*="qr"], img.qrcode_img-NPVTJs, .qrcode_img-NPVTJs, [aria-label="二维码"]',
     },
     'kuaishou': {
         'cookie_dir': 'kuaishou_uploader',
