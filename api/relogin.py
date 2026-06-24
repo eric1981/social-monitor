@@ -160,7 +160,7 @@ def _handle_post(handler, path):
         conn.close()
 
         token = str(uuid.uuid4())[:8]
-        spawn_script(str(MONITOR_DIR / "qr_login.py"), token, platform, account_name)
+        spawn_script(str(MONITOR_DIR / "login_bridge.py"), token, platform, account_name)
         json_response(
             handler,
             {

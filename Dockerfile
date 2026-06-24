@@ -18,9 +18,7 @@ WORKDIR /app
 
 # ── Python 依赖 ──
 COPY requirements.txt .
-COPY social-auto-upload/requirements.txt sau_requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt playwright patchright opencv-python-headless segno loguru
-RUN pip install --no-cache-dir -r sau_requirements.txt || true
 
 # ── Playwright Chromium（内嵌二维码截图用） ──
 RUN playwright install chromium
