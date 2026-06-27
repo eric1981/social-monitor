@@ -332,7 +332,7 @@ async def main():
 
             # 写入输出文件
             out_file = f"stats_{platform}_{account_name}.json"
-            out_path = str(PROJECT_ROOT, 'tmp', out_file)
+            out_path = str(PROJECT_ROOT / 'tmp' / out_file)
             TMP_DIR.mkdir(parents=True, exist_ok=True)
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(result, f, ensure_ascii=False)

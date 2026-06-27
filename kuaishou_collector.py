@@ -22,7 +22,7 @@ def find_cookie(account_name):
     """在项目 cookies 目录查找 cookie 文件。"""
     candidates = [
         COOKIES_DIR / f"kuaishou_{account_name}.json",
-        COOKIES_DIR / f"kuaishou_uploader" / account_name,
+        COOKIES_DIR / "ks_uploader" / account_name,
     ]
     for p in candidates:
         if p.exists():

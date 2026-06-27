@@ -1,35 +1,26 @@
 #!/usr/bin/env python3
-"""
-Windows 侧小红书采集脚本 — Playwright + cookie 文件
-通过访问 note-manager 页面并从 DOM 提取笔记数据
-"""
-
-import json, os, sys, asyncio
+"""小红书采集 — xvfb + 真实滚动翻页"""
+import json, os, sys, asyncio, subprocess
 from pathlib import Path
 
 try:
     from patchright.async_api import async_playwright
 except ImportError:
-    try:
-        from playwright.async_api import async_playwright
-    except ImportError:
-        print("ERROR: Need playwright or patchright"); sys.exit(1)
+    from playwright.async_api import async_playwright
 
 PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = Path(os.environ.get('SM_DATA_DIR', str(PROJECT_ROOT)))
 COOKIES_DIR = DATA_DIR / 'social-auto-upload' / 'cookies'
 TMP_DIR = PROJECT_ROOT / 'tmp'
 
+
 def find_cookie(account_name):
-    """在项目 cookies 目录查找 cookie 文件。"""
-    candidates = [
-        COOKIES_DIR / f"xiaohongshu_{account_name}.json",
-        COOKIES_DIR / f"xiaohongshu_uploader" / account_name,
-    ]
-    for p in candidates:
+    for p in [COOKIES_DIR / f"xiaohongshu_{account_name}.json",
+              COOKIES_DIR / "xiaohongshu_uploader" / account_name]:
         if p.exists():
             return str(p)
     return None
+
 
 async def collect():
     account_name = sys.argv[1] if len(sys.argv) > 1 else 'xhs1'
@@ -37,124 +28,128 @@ async def collect():
     if not account_file:
         print(f"ERROR: Cookie not found"); sys.exit(1)
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        try:
-            context = await browser.new_context(
-                storage_state=account_file,
-                viewport={'width': 1400, 'height': 900}
-            )
-            page = await context.new_page()
+    # Start xvfb if not already running
+    if 'DISPLAY' not in os.environ or not os.environ.get('DISPLAY'):
+        xvfb = subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24', '-ac'],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.environ['DISPLAY'] = ':99'
+        await asyncio.sleep(1)
+    else:
+        xvfb = None
 
-            # 访问笔记管理页面（不用 API）
-            await page.goto(
-                "https://creator.xiaohongshu.com/new/note-manager",
-                wait_until="domcontentloaded"
-            )
-            await page.wait_for_timeout(8000)
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            try:
+                context = await browser.new_context(
+                    storage_state=account_file,
+                    viewport={'width': 1400, 'height': 900}
+                )
+                page = await context.new_page()
 
-            url = page.url
-            if 'login' in url.lower():
-                print(f"[{account_name}] Cookie expired", flush=True)
-                sys.exit(1)
+                all_notes = []
+                seen_ids = set()
 
-            print(f"[{account_name}] Page loaded: {url[:60]}", flush=True)
+                async def capture_api(route):
+                    resp = await route.fetch()
+                    if 'user/posted' in route.request.url and resp.status == 200:
+                        try:
+                            body = await resp.json()
+                            notes = (body.get('data', {}) or {}).get('notes', [])
+                            for n in notes:
+                                nid = n.get('id', '')
+                                if nid and nid not in seen_ids:
+                                    seen_ids.add(nid)
+                                    imgs = n.get('images_list', [])
+                                    all_notes.append({
+                                        'id': nid,
+                                        'title': n.get('display_title', ''),
+                                        'date': n.get('time', ''),
+                                        'cover_url': imgs[0].get('url', '') if imgs else '',
+                                        'views': n.get('view_count', 0) or 0,
+                                        'comments': n.get('comments_count', 0) or 0,
+                                        'likes': n.get('likes', 0) or 0,
+                                        'collects': n.get('collected_count', 0) or 0,
+                                    })
+                            print(f"  api: +{len(notes)} (total {len(all_notes)})", flush=True)
+                        except: pass
+                    await route.fulfill(response=resp)
 
-            # DOM 提取笔记列表（参考 OpenCLI adapter 的逻辑）
-            notes = await page.evaluate("""
-                () => {
-                    const noteIdRe = /"noteId":"([0-9a-f]{24})"/;
-                    const cards = document.querySelectorAll('div.note[data-impression], div.note');
-                    return Array.from(cards).map((card) => {
-                        const impression = card.getAttribute('data-impression') || '';
-                        const id = impression.match(noteIdRe)?.[1] || '';
-                        const title = (card.querySelector('.title, .raw')?.innerText || '').trim();
-                        const dateText = (card.querySelector('.time_status, .time')?.innerText || '').trim();
-                        const date = dateText.replace(/^发布于\s*/, '');
-                        const cover = card.querySelector('img')?.getAttribute('src') || '';
-                        const metrics = Array.from(card.querySelectorAll('.icon_list .icon'))
-                            .map((el) => parseInt((el.innerText || '').trim(), 10))
-                            .filter((value) => Number.isFinite(value));
-                        return { id, title, date, cover, metrics };
-                    }).filter(n => n.title || n.id);
-                }
-            """)
+                await page.route('**/api/galaxy/**', capture_api)
 
-            print(f"DOM cards: {len(notes)}", flush=True)
+                await page.goto(
+                    "https://creator.xiaohongshu.com/new/note-manager",
+                    wait_until="networkidle", timeout=30000
+                )
+                await page.wait_for_timeout(5000)
 
-            # 转换为标准格式
-            result = []
-            for n in notes:
-                m = n.get('metrics', [])
-                result.append({
-                    'id': n.get('id', ''),
-                    'title': n.get('title', ''),
-                    'date': n.get('date', ''),
-                    'cover_url': n.get('cover', ''),
-                    'views': m[0] if len(m) > 0 else 0,
-                    'comments': m[1] if len(m) > 1 else 0,
-                    'likes': m[2] if len(m) > 2 else 0,
-                    'collects': m[3] if len(m) > 3 else 0,
-                })
+                if 'login' in page.url.lower():
+                    print(f"[{account_name}] Cookie expired", flush=True)
+                    sys.exit(1)
 
-            # 如果 DOM 没取到，fallback: 从 body text 解析
-            if not result:
-                body_text = await page.evaluate("() => document.body?.innerText || ''")
-                print(f"Falling back to text parse...", flush=True)
+                # Click "全部" tab
+                await page.evaluate("""
+                    () => { for (const t of document.querySelectorAll('.tab-item'))
+                        if (t.innerText.includes('全部')) { t.click(); break; } }
+                """)
+                await page.wait_for_timeout(2000)
 
-                import re
-                lines = [l.strip() for l in body_text.split('\n') if l.strip()]
-                i = 0
-                while i < len(lines):
-                    date_match = re.match(r'^发布于 (\d{4}年\d{2}月\d{2}日 \d{2}:\d{2})$', lines[i])
-                    if date_match:
-                        title = lines[i-1] if i > 0 else ''
-                        date = date_match.group(1)
-                        metrics = []
-                        j = i + 1
-                        while j < len(lines) and re.match(r'^\d+$', lines[j]) and len(metrics) < 5:
-                            metrics.append(int(lines[j]))
-                            j += 1
-                        if len(metrics) >= 4:
-                            result.append({
-                                'id': '',
-                                'title': title,
-                                'date': date,
-                                'views': metrics[0],
-                                'comments': metrics[1],
-                                'likes': metrics[2],
-                                'collects': metrics[3],
-                            })
-                        i = j
+                # Scroll with real mouse wheel events to trigger virtual list
+                prev_count = 0
+                stale_count = 0
+                for i in range(60):
+                    box = await page.evaluate("""
+                        () => {
+                            const c = document.querySelector('.notes-container');
+                            if (!c) return null;
+                            const r = c.getBoundingClientRect();
+                            return { x: r.x + r.width / 2, y: r.y + r.height - 50 };
+                        }
+                    """)
+                    if box:
+                        await page.mouse.move(box['x'], box['y'])
+                        await page.mouse.wheel(0, 1000)
+
+                    await page.wait_for_timeout(2000)
+                    count = len(all_notes)
+                    print(f"  scroll {i}: {count} notes", flush=True)
+                    if count == prev_count:
+                        stale_count += 1
+                        if stale_count >= 5:
+                            break
                     else:
-                        i += 1
+                        stale_count = 0
+                    prev_count = count
 
-            # 提取昵称
-            nickname = ''
-            nick = await page.evaluate("""
-                () => {
-                    const el = document.querySelector('[class*="userName"], [class*="nickname"]');
-                    return el?.textContent?.trim()?.slice(0, 30) || '';
-                }
-            """)
-            if nick:
-                nickname = nick
+                # Nickname
+                body_text = await page.evaluate("() => document.body?.innerText || ''")
+                nickname = ''
+                skip = {'全部','已发布','审核中','未通过','仅自己可见','公开',
+                        '首页','笔记管理','数据看板','活动中心','笔记灵感',
+                        '创作学院','创作百科','发布笔记','创作服务平台',
+                        '收起侧边栏','正在加载中','遇到问题'}
+                lines = [l.strip() for l in body_text.split('\n') if l.strip()]
+                for i, line in enumerate(lines):
+                    if line in ('发布笔记','创作服务平台') and i+1 < len(lines):
+                        c = lines[i+1]
+                        if len(c) < 20 and c not in skip:
+                            nickname = c; break
 
-            out_data = {'videos': result, 'nickname': nickname}
-            out_path = TMP_DIR / f'xiaohongshu_{account_name}.json'
-            TMP_DIR.mkdir(parents=True, exist_ok=True)
-            with open(out_path, 'w', encoding='utf-8') as f:
-                json.dump(out_data, f, ensure_ascii=False)
+                out_data = {'videos': all_notes, 'nickname': nickname}
+                out_path = TMP_DIR / f'xiaohongshu_{account_name}.json'
+                TMP_DIR.mkdir(parents=True, exist_ok=True)
+                with open(out_path, 'w', encoding='utf-8') as f:
+                    json.dump(out_data, f, ensure_ascii=False)
 
-            print(f"OK: {len(result)} notes, nickname={nickname}", flush=True)
-            for n in result[:3]:
-                try:
-                    print(f"  views={n['views']:>6} likes={n['likes']:>4} | {n['title'][:40]}", flush=True)
-                except:
-                    pass
+                print(f"FINAL: {len(all_notes)} notes, nickname={nickname}", flush=True)
 
-        finally:
-            await browser.close()
+            finally:
+                await browser.close()
+    finally:
+        if xvfb:
+            xvfb.terminate()
+            xvfb.wait()
+
 
 if __name__ == '__main__':
     asyncio.run(collect())

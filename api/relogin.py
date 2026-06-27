@@ -185,23 +185,16 @@ def _handle_post(handler, path):
                 json_response(handler, {"status": "error", "message": err}, 400)
                 return True
             try:
-                log_path = MONITOR_DIR / "relogin_status.json"
-                with open(log_path, "w") as f:
-                    json.dump(
-                        {
-                            "status": "running",
-                            "platform": platform,
-                            "account_name": account_name,
-                            "message": f"正在打开浏览器扫码登录 {platform}/{account_name}...",
-                        },
-                        f,
-                    )
-                spawn_script(
-                    str(MONITOR_DIR / "win_relogin.py"), platform, account_name
-                )
+                import uuid as _uuid
+                token = str(_uuid.uuid4())[:8]
+                spawn_script(str(MONITOR_DIR / "login_bridge.py"), token, platform, account_name)
                 json_response(
                     handler,
-                    {"status": "ok", "message": "扫码登录已启动，请查看浏览器窗口"},
+                    {
+                        "status": "ok",
+                        "token": token,
+                        "message": f"二维码已生成，请扫码登录 {platform}/{account_name}",
+                    },
                 )
             except Exception as e:
                 json_response(handler, {"status": "error", "message": str(e)}, 500)

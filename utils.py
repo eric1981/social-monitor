@@ -58,10 +58,19 @@ def spawn_script(*args):
         exe = win_path.replace("C:\\", "/mnt/c/").replace("\\", "/")
     else:
         exe = sys.executable
+
+    if _in_docker:
+        log_dir = MONITOR_DIR / "logs"
+        log_dir.mkdir(exist_ok=True)
+        log_path = log_dir / "spawn.log"
+        stderr_fh = open(str(log_path), "a") if log_path else subprocess.DEVNULL
+    else:
+        stderr_fh = subprocess.DEVNULL
+
     return subprocess.Popen(
         [exe, *args],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stderr=stderr_fh,
         cwd=str(MONITOR_DIR),
     )
 

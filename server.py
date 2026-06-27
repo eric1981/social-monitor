@@ -648,10 +648,9 @@ class Handler(BaseHTTPRequestHandler):
                     (account['account_name'],)
                 ).fetchall()
 
-                # 汇总信息
+                # 汇总信息（从 snapshots 实时计算，不用 accounts 表的陈旧字段）
                 total_followers = sum(r['follower_count'] or 0 for r in related_accounts)
-                total_digg = sum(r['total_digg_count'] or 0 for r in related_accounts)
-                total_play = sum(r['total_play_count'] or 0 for r in related_accounts)
+                # total_digg / total_play will be computed below from actual video data
 
                 by_platform = {}
                 all_videos = []
@@ -690,6 +689,10 @@ class Handler(BaseHTTPRequestHandler):
 
                 if platform_filter:
                     all_videos = by_platform.get(platform_filter, {}).get('videos', [])
+
+                # summary: aggregated from by_platform (computed from snapshots in loop above)
+                total_digg = sum(bp.get('total_digg', 0) or 0 for bp in by_platform.values())
+                total_play = sum(bp.get('total_play', 0) or 0 for bp in by_platform.values())
 
                 result = {
                     'account': account,
@@ -1180,6 +1183,25 @@ class Handler(BaseHTTPRequestHandler):
                     json.dump({'status': 'running', 'lines': []}, f)
                 spawn_script(str(COLLECTOR))
                 json_response(self, {'status': 'ok'})
+            except Exception as e:
+                json_response(self, {'status': 'error', 'message': str(e)}, 500)
+
+        elif parsed.path.startswith('/api/collect/') and len(parsed.path.split('/')) >= 5:
+            # POST /api/collect/{platform}/{account} — 单账号采集
+            parts = parsed.path.split('/')
+            platform = parts[3]
+            account_name = parts[4]
+            err = validate_platform(platform)
+            if err:
+                json_response(self, {'status': 'error', 'message': err}, 400)
+                return
+            err = validate_str(account_name, '账号名', 100)
+            if err:
+                json_response(self, {'status': 'error', 'message': err}, 400)
+                return
+            try:
+                spawn_script(str(COLLECTOR), '--platform', platform, '--account', account_name)
+                json_response(self, {'status': 'ok', 'message': f'开始采集 {platform}/{account_name}'})
             except Exception as e:
                 json_response(self, {'status': 'error', 'message': str(e)}, 500)
 

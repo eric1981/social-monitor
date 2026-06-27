@@ -20,4 +20,6 @@ if [ ! -f "$DATA_DIR/monitor.db" ]; then
 fi
 
 echo "Starting Social Monitor on port ${SM_PORT:-5408}..."
+# Clear stale bytecode cache so Python always recompiles from source
+rm -f /app/__pycache__/server*.pyc
 exec python3 server.py

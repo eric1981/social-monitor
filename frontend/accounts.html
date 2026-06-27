@@ -480,10 +480,6 @@ body {
     </div>
 
     <!-- Cards Grid -->
-    <div v-if="relogining" class="relogin-banner">
-      <span class="spinner-sm" style="border-color:rgba(255,56,92,0.3);border-top-color:#ff385c;flex-shrink:0;"></span>
-      {{ reloginMsg }}
-    </div>
     <div class="card-grid">
       <a v-for="a in accounts" :key="a.id"
          :href="'/account.html?id=' + a.id"
@@ -545,7 +541,10 @@ body {
             📅 {{ fmtDate(a.account_stats_updated) }}
           </span>
           <span class="updated-at" v-else>—</span>
-          <span v-if="a.cookie_status === 'failed'" class="cookie-relogin-btn" @click.prevent="reloginAccount(a)">🔄 重新扫码</span>
+          <span style="display:flex;gap:6px;align-items:center;">
+            <span v-if="a.cookie_status === 'failed'" class="cookie-relogin-btn" @click.prevent="reloginAccount(a)">🔄 重新扫码</span>
+            <span class="cookie-relogin-btn" style="color:var(--legal-link);" @click.prevent="collectSingle(a)" :title="collectingId === a.id ? '采集中...' : '抓取该账号数据'">{{ collectingId === a.id ? '⏳' : '📥' }}</span>
+          </span>
           <span class="view-hint">查看详情 →</span>
         </div>
       </a>
@@ -584,12 +583,11 @@ body {
         <button class="modal-close" @click="closeLoginModal">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Step 1: Select platform + account (show when not yet generated QR) -->
+        <!-- Step 1: Select platform (show when not yet generated QR) -->
         <template v-if="qrStatus === 'idle'">
-          <!-- First-time guidance banner -->
           <div v-if="accounts.length === 0" style="background:linear-gradient(135deg,#fff5f7,#fff);border:1px solid var(--hairline-soft);border-radius:var(--rounded-sm);padding:12px 14px;margin-bottom:var(--space-base);font-size:13px;color:var(--ink);line-height:1.5;">
             <div style="font-weight:600;margin-bottom:4px;">👋 首次添加账号</div>
-            <div style="color:var(--muted);">选择要监控的平台，输入你的账号名称，然后扫码登录即可完成添加。</div>
+            <div style="color:var(--muted);">选择平台后扫码登录，账号名自动从平台获取。</div>
           </div>
           <div class="form-group">
             <label class="form-label">平台</label>
@@ -599,18 +597,6 @@ body {
               <option value="xiaohongshu">小红书</option>
               <option value="shipinhao">视频号</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">已有账号（选填）</label>
-            <select v-model="loginAccountKey" class="form-select" @change="onLoginAccountChange">
-              <option value="">— 手动输入新账号名 —</option>
-              <option v-for="a in accounts" :key="a.platform+':'+a.account_name" :value="a.platform+':'+a.account_name">{{ platformLabels[a.platform] }}：{{ a.nickname || a.account_name }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">或输入新账号名</label>
-            <input v-model="loginAccountInput" class="form-input" placeholder="例如: benxian3" @keyup.enter="doLogin">
-            <div class="form-hint">已有账号从下拉选择，新账号手动输入</div>
           </div>
         </template>
 
@@ -651,7 +637,7 @@ body {
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" @click="closeLoginModal" :disabled="loginBusy && qrStatus === 'generating'">取消</button>
-        <button v-if="qrStatus === 'idle'" class="btn btn-primary" @click="doLogin" :disabled="loginBusy || !loginAccountFinal">
+        <button v-if="qrStatus === 'idle'" class="btn btn-primary" @click="doLogin" :disabled="loginBusy">
           生成二维码
         </button>
       </div>
@@ -829,16 +815,17 @@ createApp({
     /* ── Login / Relogin State ── */
     const showLoginModal = ref(false);
     const loginPlatform = ref('douyin');
-    const loginAccountKey = ref('');
-    const loginAccountInput = ref('');
     const loginBusy = ref(false);
     const loginStatus = ref('');
     const loginToken = ref('');
-    const qrStatus = ref('idle');  // idle | generating | waiting_scan | success | expired | error
+    const qrStatus = ref('idle');
+    const generatedName = ref('');  // stable name generated once per modal open
     let qrPollInterval = null;
     const qrImageUrl = computed(() => loginToken.value ? '/api/qr-image?token=' + loginToken.value : '');
-    const relogining = ref(false);
-    const reloginMsg = ref('');
+    const loginAccountFinal = computed(() => generatedName.value);
+
+    /* ── Single Collect ── */
+    const collectingId = ref(null);
 
     /* ── Group Management State ── */
     const showGroupModal = ref(false);
@@ -862,14 +849,6 @@ createApp({
         return groupData.value.ungrouped;
       }
       return groupData.value.ungrouped;
-    });
-
-    const loginAccountFinal = computed(() => {
-      if (loginAccountKey.value) {
-        const parts = loginAccountKey.value.split(':');
-        return parts[1] || '';
-      }
-      return loginAccountInput.value.trim();
     });
 
     const platformLabels = { douyin: '抖音', kuaishou: '快手', xiaohongshu: '小红书', shipinhao: '视频号' };
@@ -1053,12 +1032,11 @@ createApp({
     function openLoginModal() {
       showLoginModal.value = true;
       loginPlatform.value = 'douyin';
-      loginAccountKey.value = '';
-      loginAccountInput.value = '';
       loginStatus.value = '';
       loginBusy.value = false;
       loginToken.value = '';
       qrStatus.value = 'idle';
+      generatedName.value = 'douyin_' + Date.now().toString(36);
       clearQrPolling();
     }
 
@@ -1075,15 +1053,6 @@ createApp({
       if (qrPollInterval) {
         clearInterval(qrPollInterval);
         qrPollInterval = null;
-      }
-    }
-
-    function onLoginAccountChange() {
-      if (!loginAccountKey.value) return;
-      const parts = loginAccountKey.value.split(':');
-      const platform = parts[0];
-      if (platform && platformLabels[platform]) {
-        loginPlatform.value = platform;
       }
     }
 
@@ -1105,11 +1074,20 @@ createApp({
             qrStatus.value = 'expired';
             loginStatus.value = '二维码已过期，请重新生成';
             clearQrPolling();
-          } else if (st.status === 'error') {
+          } else if (st.status === 'timeout') {
+            qrStatus.value = 'expired';
+            loginStatus.value = '登录超时（已扫码但未在手机上确认），请重新生成';
+            clearQrPolling();
+          } else if (st.status === 'error' || st.status === 'failed') {
             qrStatus.value = 'error';
-            loginStatus.value = '生成失败: ' + (st.error || '');
+            loginStatus.value = '登录失败: ' + (st.error || st.message || '未知错误');
+            clearQrPolling();
+          } else if (st.status === 'cookie_invalid') {
+            qrStatus.value = 'error';
+            loginStatus.value = '扫码完成但 Cookie 无效: ' + (st.error || '请重新生成二维码重试');
             clearQrPolling();
           }
+          // 'starting' and unknown statuses: keep polling, don't change UI
         } catch(e) {}
       }, 1500);
     }
@@ -1157,18 +1135,33 @@ createApp({
       loginBusy.value = false;
     }
 
-    /* ── Relogin (from failed cookie card) — now uses embedded QR modal ── */
+    /* ── Relogin (from failed cookie card) — calls relogin API directly ── */
     function reloginAccount(a) {
-      // Open login modal pre-filled with this account's platform and name
       showLoginModal.value = true;
       loginPlatform.value = a.platform;
-      loginAccountKey.value = a.platform + ':' + a.account_name;
-      loginAccountInput.value = '';
       loginStatus.value = '';
-      loginBusy.value = false;
-      loginToken.value = '';
-      qrStatus.value = 'idle';
+      loginBusy.value = true;
+      loginStatus.value = '正在重新生成二维码...';
+      qrStatus.value = 'generating';
       clearQrPolling();
+      fetch('/api/relogin/' + a.platform + '/' + a.account_name, { method: 'POST' })
+        .then(r => r.json())
+        .then(result => {
+          if (result.status === 'ok' && result.token) {
+            loginToken.value = result.token;
+            loginBusy.value = false;
+            startQrPolling();
+          } else {
+            loginStatus.value = result.message || result.error || '请求失败';
+            loginBusy.value = false;
+            qrStatus.value = 'error';
+          }
+        })
+        .catch(e => {
+          loginStatus.value = '请求失败: ' + e.message;
+          loginBusy.value = false;
+          qrStatus.value = 'error';
+        });
     }
 
     async function fetchAccounts() {
@@ -1212,6 +1205,24 @@ createApp({
       return labels[s] || s;
     }
 
+    async function collectSingle(a) {
+      if (collectingId.value) return;  // already collecting
+      collectingId.value = a.id;
+      try {
+        const resp = await fetch('/api/collect/' + a.platform + '/' + a.account_name, { method: 'POST' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+          // Wait a bit then refresh
+          await new Promise(r => setTimeout(r, 2000));
+          await fetchAccounts();
+        }
+      } catch (e) {
+        console.error('Collect failed:', e);
+      } finally {
+        collectingId.value = null;
+      }
+    }
+
     function nickForGroup(g) {
       for (const p of Object.values(g.platforms || {})) {
         if (p.nickname) return p.nickname;
@@ -1247,11 +1258,13 @@ createApp({
       platformLabels, platformColor, platformIcon, cookieLabel,
       fmtNum, fmtDate, platLabel,
       /* Login */
-      showLoginModal, loginPlatform, loginAccountKey, loginAccountInput,
+      showLoginModal, loginPlatform,
       loginBusy, loginStatus, loginToken, qrStatus, qrImageUrl, loginAccountFinal,
-      openLoginModal, closeLoginModal, onLoginAccountChange, doLogin, regenerateQR,
+      openLoginModal, closeLoginModal, doLogin, regenerateQR,
+      /* Collect */
+      collectingId, collectSingle,
       /* Relogin */
-      relogining, reloginMsg, reloginAccount,
+      reloginAccount,
       /* Group Management */
       showGroupModal, groupData, selectedGroup, newGroupName, ungroupedList,
       editingGroupId, editingGroupName,
